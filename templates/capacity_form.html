@@ -1,0 +1,99 @@
+{{define "capacity_form"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Capacity - Load Calendar</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <nav class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-xl font-bold text-gray-900">Load Calendar</a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    {{if .IsAuthenticated}}
+                        <span class="text-gray-600">{{.UserEmail}}</span>
+                        <a href="/my-capacity" class="text-blue-600 hover:text-blue-800">My Capacity</a>
+                        <button hx-post="/auth/logout" hx-swap="none" class="text-gray-600 hover:text-gray-800">Logout</button>
+                    {{else}}
+                        <a href="/login" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Login</a>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="max-w-2xl mx-auto">
+            <div class="bg-white rounded-lg shadow p-8">
+                <h2 class="text-2xl font-bold mb-6">My Capacity Settings</h2>
+
+                <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <p class="text-gray-600">Managing capacity for:</p>
+                    <p class="text-lg font-semibold">{{.Entity.Title}}</p>
+                    <p class="text-sm text-gray-500">{{.Entity.ID}}</p>
+                </div>
+
+                <form hx-post="/api/my-capacity" hx-target="#form-result" hx-swap="innerHTML" class="space-y-6">
+                    <div>
+                        <label for="default_capacity" class="block text-sm font-medium text-gray-700 mb-1">Default Daily Capacity</label>
+                        <input type="number" name="default_capacity" id="default_capacity" step="0.5" min="0" value='{{printf "%.1f" .Entity.DefaultCapacity}}' class="w-32 border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                        <p class="text-sm text-gray-500 mt-1">This is your standard capacity for most days.</p>
+                    </div>
+
+                    <div class="border-t pt-6">
+                        <h3 class="text-lg font-medium mb-4">Date-Specific Overrides</h3>
+                        <p class="text-sm text-gray-500 mb-4">Set custom capacity for specific dates (e.g., days off, holidays).</p>
+
+                        <div id="overrides-container" class="space-y-3">
+                            {{range $i, $override := .Overrides}}
+                            <div class="flex gap-3 items-center override-row">
+                                <input type="date" name='date_overrides[{{$i}}][date]' value='{{$override.Date.Format "2006-01-02"}}' class="border border-gray-300 rounded-md px-3 py-2">
+                                <input type="number" name='date_overrides[{{$i}}][capacity]' step="0.5" min="0" value='{{printf "%.1f" $override.Capacity}}' class="w-24 border border-gray-300 rounded-md px-3 py-2">
+                                <button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700">Remove</button>
+                            </div>
+                            {{end}}
+                        </div>
+
+                        <button type="button" onclick="addOverrideRow()" class="mt-3 text-blue-600 hover:text-blue-800 text-sm">+ Add Override</button>
+                    </div>
+
+                    <div id="form-result"></div>
+
+                    <div class="flex gap-3">
+                        <button type="submit" class="bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700">Save Changes</button>
+                        <a href="/?entity={{.Entity.ID}}" class="bg-gray-200 text-gray-700 py-2 px-6 rounded-md hover:bg-gray-300">View Heatmap</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+            let overrideIndex = {{len .Overrides}};
+
+            function addOverrideRow() {
+                const container = document.getElementById('overrides-container');
+                const today = new Date().toISOString().split('T')[0];
+
+                const row = document.createElement('div');
+                row.className = 'flex gap-3 items-center override-row';
+                row.innerHTML = '<input type="date" name="date_overrides[' + overrideIndex + '][date]" value="' + today + '" class="border border-gray-300 rounded-md px-3 py-2"><input type="number" name="date_overrides[' + overrideIndex + '][capacity]" step="0.5" min="0" value="0" class="w-24 border border-gray-300 rounded-md px-3 py-2"><button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700">Remove</button>';
+                container.appendChild(row);
+                overrideIndex++;
+            }
+        </script>
+    </main>
+
+    <footer class="bg-white border-t mt-auto">
+        <div class="max-w-7xl mx-auto px-4 py-4 text-center text-gray-500 text-sm">
+            Load Calendar - Capacity Forecasting System
+        </div>
+    </footer>
+</body>
+</html>
+{{end}}

@@ -1,0 +1,25 @@
+{{define "heatmap_grid"}}
+<div class="overflow-x-auto">
+    <div class="flex gap-6">
+        {{range $month := .Months}}
+        <div class="min-w-[180px]">
+            <h3 class="text-sm font-semibold text-gray-700 mb-2 text-center">
+                {{$month.MonthName}} {{$month.Year}}
+            </h3>
+            <div class="grid grid-cols-7 gap-1">
+                {{range $day := $month.Days}}
+                <div class="heatmap-cell w-5 h-5 rounded cursor-pointer relative group {{if $day.IsToday}}ring-2 ring-blue-500{{end}}"
+                     style="background-color: {{$day.Color}}"
+                     onclick="showDayDetails('{{$.EntityID}}', '{{$day.DateStr}}')"
+                     title="{{$day.DateStr}}: Load {{printf "%.1f" $day.Load}} / Capacity {{printf "%.1f" $day.Capacity}}">
+                    <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-20 pointer-events-none">
+                        {{$day.Day}}: {{printf "%.1f" $day.Load}}/{{printf "%.1f" $day.Capacity}}
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </div>
+        {{end}}
+    </div>
+</div>
+{{end}}

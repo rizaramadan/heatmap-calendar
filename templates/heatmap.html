@@ -1,0 +1,155 @@
+{{define "heatmap"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heatmap - Load Calendar</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .heatmap-cell {
+            transition: transform 0.1s ease;
+        }
+        .heatmap-cell:hover {
+            transform: scale(1.2);
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <nav class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-xl font-bold text-gray-900">Load Calendar</a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    {{if .IsAuthenticated}}
+                        <span class="text-gray-600">{{.UserEmail}}</span>
+                        <a href="/my-capacity" class="text-blue-600 hover:text-blue-800">My Capacity</a>
+                        <button hx-post="/auth/logout" hx-swap="none" class="text-gray-600 hover:text-gray-800">Logout</button>
+                    {{else}}
+                        <a href="/login" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Login</a>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="space-y-6">
+            <!-- Entity Selector -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold mb-4">Select Person or Group</h2>
+                <form action="/" method="GET" class="flex gap-4 items-end">
+                    <div class="flex-1">
+                        <label for="entity" class="block text-sm font-medium text-gray-700 mb-1">Entity</label>
+                        <select name="entity" id="entity"
+                                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                                onchange="this.form.submit()">
+                            <option value="">-- Select --</option>
+                            {{range .Entities}}
+                                <option value="{{.ID}}" {{if eq $.SelectedEntity .ID}}selected{{end}}>
+                                    {{.Title}} ({{.Type}})
+                                </option>
+                            {{end}}
+                        </select>
+                    </div>
+                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+                        View
+                    </button>
+                </form>
+            </div>
+
+            {{if .Error}}
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                    {{.Error}}
+                </div>
+            {{end}}
+
+            {{if .HeatmapData}}
+            <!-- Heatmap Display -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-xl font-bold">{{.HeatmapData.Entity.Title}}</h2>
+                        <p class="text-gray-500 text-sm">
+                            Type: {{.HeatmapData.Entity.Type}} | Default Capacity: {{printf "%.1f" .HeatmapData.Entity.DefaultCapacity}}
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="text-gray-500">Load:</span>
+                        <span class="w-4 h-4 rounded" style="background-color: #22c55e"></span> Low
+                        <span class="w-4 h-4 rounded" style="background-color: #fbbf24"></span> Medium
+                        <span class="w-4 h-4 rounded" style="background-color: #dc2626"></span> High
+                        <span class="w-4 h-4 rounded" style="background-color: #8B0000"></span> Overload
+                    </div>
+                </div>
+
+                <div id="heatmap-container">
+                    {{template "heatmap_grid_inline" .}}
+                </div>
+            </div>
+
+            <!-- Day Details Panel -->
+            <div id="day-details" class="bg-white rounded-lg shadow p-6 hidden">
+                <div id="day-details-content">
+                    <!-- Loaded via HTMX -->
+                </div>
+            </div>
+            {{else if .SelectedEntity}}
+                <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+                    No data available for this entity.
+                </div>
+            {{end}}
+        </div>
+
+        <script>
+            function showDayDetails(entityId, date) {
+                const container = document.getElementById('day-details');
+                const content = document.getElementById('day-details-content');
+                container.classList.remove('hidden');
+
+                htmx.ajax('GET', '/api/heatmap/' + entityId + '/day/' + date, {
+                    target: '#day-details-content',
+                    swap: 'innerHTML'
+                });
+            }
+        </script>
+    </main>
+
+    <footer class="bg-white border-t mt-auto">
+        <div class="max-w-7xl mx-auto px-4 py-4 text-center text-gray-500 text-sm">
+            Load Calendar - Capacity Forecasting System
+        </div>
+    </footer>
+</body>
+</html>
+{{end}}
+
+{{define "heatmap_grid_inline"}}
+<div class="overflow-x-auto">
+    <div class="flex gap-6">
+        {{range $month := .Months}}
+        <div class="min-w-[180px]">
+            <h3 class="text-sm font-semibold text-gray-700 mb-2 text-center">
+                {{$month.MonthName}} {{$month.Year}}
+            </h3>
+            <div class="grid grid-cols-7 gap-1">
+                {{range $day := $month.Days}}
+                <div class="heatmap-cell w-5 h-5 rounded cursor-pointer relative group {{if $day.IsToday}}ring-2 ring-blue-500{{end}}"
+                     style="background-color: {{$day.Color}}"
+                     onclick="showDayDetails('{{$.SelectedEntity}}', '{{$day.DateStr}}')"
+                     title="{{$day.DateStr}}: Load {{printf "%.1f" $day.Load}} / Capacity {{printf "%.1f" $day.Capacity}}">
+                    <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-20 pointer-events-none">
+                        {{$day.Day}}: {{printf "%.1f" $day.Load}}/{{printf "%.1f" $day.Capacity}}
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </div>
+        {{end}}
+    </div>
+</div>
+{{end}}
