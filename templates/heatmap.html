@@ -1,89 +1,220 @@
 {{define "heatmap"}}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Heatmap - Load Calendar</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/dark-mode.css">
     <style>
+        body {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f5f7fa 100%);
+        }
+        html.dark-mode body {
+            background: linear-gradient(135deg, #1a1f2e 0%, #0f1419 100%);
+        }
         .heatmap-cell {
-            transition: transform 0.1s ease;
+            transition: all 0.2s ease;
+            border-radius: 4px;
         }
         .heatmap-cell:hover {
-            transform: scale(1.2);
+            transform: scale(1.15);
             z-index: 10;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .card-shadow {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
         }
     </style>
+    <script>
+        function toggleDarkMode() {
+            const isDarkMode = document.documentElement.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', isDarkMode);
+        }
+        // Initialize dark mode from localStorage
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.documentElement.classList.add('dark-mode');
+        }
+    </script>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <nav class="bg-white shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
+
+<body class="min-h-screen">
+    <nav class="bg-white/80 backdrop-blur-sm">
+        <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
+            <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center">
-                    <a href="/" class="text-xl font-bold text-gray-900">Load Calendar</a>
+                    <h1 class="text-2xl font-bold text-gray-800">Load Calendar</h1>
                 </div>
                 <div class="flex items-center space-x-4">
+                    <button class="dark-toggle" onclick="toggleDarkMode()" title="Toggle dark mode">
+                        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1m-16 0H1m15.657 5.657l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                        </svg>
+                    </button>
                     {{if .IsAuthenticated}}
-                        <span class="text-gray-600">{{.UserEmail}}</span>
-                        <a href="/my-capacity" class="text-blue-600 hover:text-blue-800">My Capacity</a>
-                        <button hx-post="/auth/logout" hx-swap="none" class="text-gray-600 hover:text-gray-800">Logout</button>
+                    <span class="text-gray-600 text-sm">{{.UserEmail}}</span>
+                    <a href="/my-capacity" class="text-blue-600 hover:text-blue-700 text-sm font-medium">My Capacity</a>
+                    <button hx-post="/auth/logout" hx-swap="none"
+                        class="text-gray-600 hover:text-gray-800 text-sm">Logout</button>
                     {{else}}
-                        <a href="/login" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Login</a>
+                    <a href="/login" class="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 font-medium shadow-sm">Login</a>
                     {{end}}
                 </div>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-8">
         <div class="space-y-6">
             <!-- Entity Selector -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-lg font-semibold mb-4">Select Person or Group</h2>
-                <form action="/" method="GET" class="flex gap-4 items-end">
-                    <div class="flex-1">
-                        <label for="entity" class="block text-sm font-medium text-gray-700 mb-1">Entity</label>
-                        <select name="entity" id="entity"
-                                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-                                onchange="this.form.submit()">
-                            <option value="">-- Select --</option>
-                            {{range .Entities}}
-                                <option value="{{.ID}}" {{if eq $.SelectedEntity .ID}}selected{{end}}>
-                                    {{.Title}} ({{.Type}})
-                                </option>
-                            {{end}}
-                        </select>
+            <div class="bg-white rounded-xl shadow-sm card-shadow p-6">
+                <h2 class="text-lg font-semibold mb-4 text-gray-700">Select Person or Group</h2>
+                <form action="/" method="GET" class="flex gap-4 items-end" id="entityForm">
+                    <div class="flex-1 relative">
+                        <input type="text" 
+                            id="entitySearch" 
+                            placeholder="Type to search..."
+                            class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                            autocomplete="off"
+                            value="{{range .Entities}}{{if eq $.SelectedEntity .ID}}{{.Title}} ({{.Type}}){{end}}{{end}}">
+                        <input type="hidden" name="entity" id="entity" value="{{.SelectedEntity}}">
+                        
+                        <!-- Dropdown suggestions -->
+                        <div id="suggestions" class="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto hidden">
+                        </div>
                     </div>
-                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+                    <button type="submit" class="bg-blue-600 text-white px-8 py-2.5 rounded-lg text-base font-medium hover:bg-blue-700 shadow-sm">
                         View
                     </button>
                 </form>
             </div>
+            
+            <script>
+                // Entity data
+                const entities = [
+                    {{range .Entities}}
+                    {id: '{{.ID}}', title: '{{.Title}}', type: '{{.Type}}'},
+                    {{end}}
+                ];
+
+                const searchInput = document.getElementById('entitySearch');
+                const hiddenInput = document.getElementById('entity');
+                const form = document.getElementById('entityForm');
+                const suggestionsDiv = document.getElementById('suggestions');
+
+                // Show/filter suggestions
+                function showSuggestions(query) {
+                    const filtered = entities.filter(entity => {
+                        const fullText = `${entity.title} (${entity.type})`.toLowerCase();
+                        return fullText.includes(query.toLowerCase());
+                    });
+
+                    if (filtered.length === 0 || (filtered.length === 1 && query && `${filtered[0].title} (${filtered[0].type})`.toLowerCase() === query.toLowerCase())) {
+                        suggestionsDiv.classList.add('hidden');
+                        return;
+                    }
+
+                    suggestionsDiv.innerHTML = filtered.map(entity => 
+                        `<div class="px-4 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0" 
+                              data-id="${entity.id}" 
+                              data-title="${entity.title}" 
+                              data-type="${entity.type}">
+                            ${entity.title} <span class="text-gray-500 text-sm">(${entity.type})</span>
+                         </div>`
+                    ).join('');
+
+                    suggestionsDiv.classList.remove('hidden');
+
+                    // Add click handlers
+                    suggestionsDiv.querySelectorAll('[data-id]').forEach(item => {
+                        item.addEventListener('click', function() {
+                            selectEntity(this.dataset.id, this.dataset.title, this.dataset.type);
+                        });
+                    });
+                }
+
+                // Select entity
+                function selectEntity(id, title, type) {
+                    searchInput.value = `${title} (${type})`;
+                    hiddenInput.value = id;
+                    suggestionsDiv.classList.add('hidden');
+                    form.submit();
+                }
+
+                // Input event
+                searchInput.addEventListener('input', function() {
+                    const value = this.value.trim();
+                    if (value.length === 0) {
+                        showSuggestions('');
+                    } else {
+                        showSuggestions(value);
+                    }
+                });
+
+                // Focus event - show all options
+                searchInput.addEventListener('focus', function() {
+                    showSuggestions(this.value || '');
+                });
+
+                // Click outside to close
+                document.addEventListener('click', function(e) {
+                    if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                        suggestionsDiv.classList.add('hidden');
+                    }
+                });
+
+                // Enter key to submit
+                searchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        const firstSuggestion = suggestionsDiv.querySelector('[data-id]');
+                        if (firstSuggestion) {
+                            selectEntity(firstSuggestion.dataset.id, firstSuggestion.dataset.title, firstSuggestion.dataset.type);
+                        }
+                    }
+                });
+            </script>
 
             {{if .Error}}
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                    {{.Error}}
-                </div>
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                {{.Error}}
+            </div>
             {{end}}
 
             {{if .HeatmapData}}
             <!-- Heatmap Display -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <div class="flex justify-between items-center mb-6">
+            <div class="bg-white rounded-xl shadow-sm card-shadow p-8">
+                <div class="flex justify-between items-start mb-8">
                     <div>
-                        <h2 class="text-xl font-bold">{{.HeatmapData.Entity.Title}}</h2>
-                        <p class="text-gray-500 text-sm">
-                            Type: {{.HeatmapData.Entity.Type}} | Default Capacity: {{printf "%.1f" .HeatmapData.Entity.DefaultCapacity}}
+                        <h2 class="text-2xl font-bold text-gray-800">{{.HeatmapData.Entity.Title}}</h2>
+                        <p class="text-gray-500 text-sm mt-1">
+                            Type: {{.HeatmapData.Entity.Type}} | Capacity: {{printf "%.0f"
+                            .HeatmapData.Entity.DefaultCapacity}} capacity
                         </p>
                     </div>
-                    <div class="flex items-center gap-2 text-sm">
-                        <span class="text-gray-500">Load:</span>
-                        <span class="w-4 h-4 rounded" style="background-color: #22c55e"></span> Low
-                        <span class="w-4 h-4 rounded" style="background-color: #fbbf24"></span> Medium
-                        <span class="w-4 h-4 rounded" style="background-color: #dc2626"></span> High
-                        <span class="w-4 h-4 rounded" style="background-color: #8B0000"></span> Overload
+                    <div class="flex items-center gap-3 text-sm bg-gray-50 px-4 py-2 rounded-lg">
+                        <span class="text-gray-600 font-medium">Load Legend:</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-4 h-4 rounded" style="background-color: #86efac"></span>
+                            <span class="text-gray-700">Green</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-4 h-4 rounded" style="background-color: #fcd34d"></span>
+                            <span class="text-gray-700">Amber</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-4 h-4 rounded" style="background-color: #f87171"></span>
+                            <span class="text-gray-700">Red</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-4 h-4 rounded" style="background-color: #7f1d1d"></span>
+                            <span class="text-gray-700">Dark</span>
+                        </div>
                     </div>
                 </div>
 
@@ -93,15 +224,15 @@
             </div>
 
             <!-- Day Details Panel -->
-            <div id="day-details" class="bg-white rounded-lg shadow p-6 hidden">
+            <div id="day-details" class="bg-white rounded-xl shadow-sm card-shadow p-8 hidden">
                 <div id="day-details-content">
                     <!-- Loaded via HTMX -->
                 </div>
             </div>
             {{else if .SelectedEntity}}
-                <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
-                    No data available for this entity.
-                </div>
+            <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+                No data available for this entity.
+            </div>
             {{end}}
         </div>
 
@@ -125,31 +256,48 @@
         </div>
     </footer>
 </body>
+
 </html>
 {{end}}
 
 {{define "heatmap_grid_inline"}}
-<div class="overflow-x-auto">
-    <div class="flex gap-6">
+<div class="overflow-x-auto overflow-y-visible py-4">
+    <div class="flex gap-8">
         {{range $month := .Months}}
-        <div class="min-w-[180px]">
-            <h3 class="text-sm font-semibold text-gray-700 mb-2 text-center">
+        <div class="min-w-[200px]">
+            <h3 class="text-base font-semibold text-gray-700 mb-3 text-center">
                 {{$month.MonthName}} {{$month.Year}}
             </h3>
-            <div class="grid grid-cols-7 gap-1">
+            <div class="grid grid-cols-7 gap-1.5">
                 {{range $day := $month.Days}}
-                <div class="heatmap-cell w-5 h-5 rounded cursor-pointer relative group {{if $day.IsToday}}ring-2 ring-blue-500{{end}}"
-                     style="background-color: {{$day.Color}}"
-                     onclick="showDayDetails('{{$.SelectedEntity}}', '{{$day.DateStr}}')"
-                     title="{{$day.DateStr}}: Load {{printf "%.1f" $day.Load}} / Capacity {{printf "%.1f" $day.Capacity}}">
-                    <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-20 pointer-events-none">
-                        {{$day.Day}}: {{printf "%.1f" $day.Load}}/{{printf "%.1f" $day.Capacity}}
+                {{if gt $day.Load 0.0}}
+                <div class="heatmap-cell w-6 h-6 rounded cursor-pointer relative group {{if $day.IsToday}}ring-2 ring-blue-600{{end}}"
+                    style="background-color: {{$day.Color}}"
+                    onclick="showDayDetails('{{$.SelectedEntity}}', '{{$day.DateStr}}')">
+                    <div
+                        class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 whitespace-nowrap z-50 pointer-events-none transition-opacity duration-200">
+                        <div class="font-semibold">{{$day.DateStr}}</div>
+                        <div>Total Load: {{printf "%.1f" $day.Load}}</div>
                     </div>
                 </div>
+                {{else}}
+                <div class="heatmap-cell w-6 h-6 rounded relative group {{if $day.IsToday}}ring-2 ring-blue-600{{end}}"
+                    style="background-color: {{$day.Color}}">
+                    <div
+                        class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 whitespace-nowrap z-50 pointer-events-none transition-opacity duration-200">
+                        <div class="font-semibold">{{$day.DateStr}}</div>
+                        <div>No Load</div>
+                    </div>
+                </div>
+                {{end}}
                 {{end}}
             </div>
         </div>
         {{end}}
     </div>
 </div>
+
+<script>
+    // toggleDarkMode is already defined in the head
+</script>
 {{end}}

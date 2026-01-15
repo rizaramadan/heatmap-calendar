@@ -183,7 +183,9 @@ func (r *LoadRepository) GetPersonLoadForDateRange(ctx context.Context, email st
 		if err := rows.Scan(&date, &load); err != nil {
 			return nil, fmt.Errorf("failed to scan load: %w", err)
 		}
-		loads[date.Truncate(24*time.Hour)] = load
+		// Use UTC to normalize the date key
+		normalizedDate := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
+		loads[normalizedDate] = load
 	}
 
 	return loads, nil
@@ -214,7 +216,9 @@ func (r *LoadRepository) GetGroupLoadForDateRange(ctx context.Context, groupID s
 		if err := rows.Scan(&date, &load); err != nil {
 			return nil, fmt.Errorf("failed to scan load: %w", err)
 		}
-		loads[date.Truncate(24*time.Hour)] = load
+		// Use UTC to normalize the date key
+		normalizedDate := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
+		loads[normalizedDate] = load
 	}
 
 	return loads, nil

@@ -21,7 +21,7 @@ func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	cfg := &Config{
-		DatabaseURL:           getEnv("DATABASE_URL", "postgres://localhost:5432/heatmap?sslmode=disable"),
+		DatabaseURL:           getEnv("DATABASE_URL", "postgres://localhost:5432/load_calendar?sslmode=disable"),
 		APIKey:                getEnv("API_KEY", ""),
 		SessionSecret:         getEnv("SESSION_SECRET", "default-secret-change-in-production"),
 		MailgunAPIKey:         getEnv("MAILGUN_API_KEY", ""),

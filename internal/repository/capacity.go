@@ -132,10 +132,11 @@ func (r *CapacityRepository) GetCapacitiesForRange(ctx context.Context, entityID
 		return nil, fmt.Errorf("failed to get default capacity: %w", err)
 	}
 
-	// Initialize map with default capacity for all days
+	// Initialize map with default capacity for all days (use UTC)
 	capacities := make(map[time.Time]float64)
-	for d := start.Truncate(24 * time.Hour); !d.After(end); d = d.AddDate(0, 0, 1) {
-		capacities[d] = defaultCapacity
+	for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
+		normalizedDate := time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.UTC)
+		capacities[normalizedDate] = defaultCapacity
 	}
 
 	// Get overrides and apply them
@@ -145,7 +146,8 @@ func (r *CapacityRepository) GetCapacitiesForRange(ctx context.Context, entityID
 	}
 
 	for _, o := range overrides {
-		capacities[o.Date.Truncate(24*time.Hour)] = o.Capacity
+		normalizedDate := time.Date(o.Date.Year(), o.Date.Month(), o.Date.Day(), 0, 0, 0, 0, time.UTC)
+		capacities[normalizedDate] = o.Capacity
 	}
 
 	return capacities, nil

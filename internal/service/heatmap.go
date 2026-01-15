@@ -39,7 +39,9 @@ func (s *HeatmapService) GetHeatmapData(ctx context.Context, entityID string, da
 	}
 
 	// Calculate date range: 3 months previous and 6 months ahead
-	today := time.Now().Truncate(24 * time.Hour)
+	// Use UTC for consistent date handling
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	startDate := today.AddDate(0, -3, 0) // 3 months before today
 	endDate := today.AddDate(0, 6, 0)    // 6 months after today
 
@@ -63,8 +65,10 @@ func (s *HeatmapService) GetHeatmapData(ctx context.Context, entityID string, da
 	// Build heatmap days
 	heatmapDays := make([]models.HeatmapDay, 0, 300)
 	for d := startDate; !d.After(endDate); d = d.AddDate(0, 0, 1) {
-		load := loads[d]
-		capacity := capacities[d]
+		// Use UTC date for lookup
+		lookupDate := time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.UTC)
+		load := loads[lookupDate]
+		capacity := capacities[lookupDate]
 		color := getHeatmapColor(load, capacity)
 
 		heatmapDays = append(heatmapDays, models.HeatmapDay{

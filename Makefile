@@ -12,10 +12,12 @@ run: build
 dev:
 	@if command -v air > /dev/null; then \
 		air; \
+	elif [ -f ~/go/bin/air ]; then \
+		~/go/bin/air; \
 	else \
 		echo "Installing air..."; \
-		go install github.com/cosmtrek/air@latest; \
-		air; \
+		go install github.com/air-verse/air@latest; \
+		~/go/bin/air; \
 	fi
 
 # Run tests

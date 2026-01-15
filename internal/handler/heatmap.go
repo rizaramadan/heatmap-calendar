@@ -103,7 +103,7 @@ func (h *HeatmapHandler) GetDayDetails(c echo.Context) error {
 		"EntityID":  entityID,
 	}
 
-	return h.templates.ExecuteTemplate(c.Response().Writer, "day_tasks.html", data)
+	return h.templates.ExecuteTemplate(c.Response().Writer, "day_tasks", data)
 }
 
 // MonthData represents grouped days for a month

@@ -1,0 +1,267 @@
+/* Dark Mode Styles */
+:root {
+    color-scheme: light dark;
+}
+
+/* Light mode (default) */
+html {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f3f4f6;
+    --bg-tertiary: #f9fafb;
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --text-tertiary: #9ca3af;
+    --border-color: #e5e7eb;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --hover-bg: #f3f4f6;
+}
+
+/* Dark mode */
+html.dark-mode {
+    --bg-primary: #1f2937;
+    --bg-secondary: #111827;
+    --bg-tertiary: #374151;
+    --text-primary: #f9fafb;
+    --text-secondary: #d1d5db;
+    --text-tertiary: #9ca3af;
+    --border-color: #4b5563;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --hover-bg: #374151;
+}
+
+/* Apply dark mode to body and elements */
+html.dark-mode body {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+html.dark-mode nav {
+    background-color: var(--bg-primary) !important;
+    border-color: var(--border-color);
+}
+
+html.dark-mode main {
+    background-color: transparent;
+}
+
+html.dark-mode footer {
+    background-color: var(--bg-primary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-secondary);
+}
+
+html.dark-mode .bg-white {
+    background-color: var(--bg-primary) !important;
+}
+
+html.dark-mode .bg-gray-100 {
+    background-color: var(--bg-secondary) !important;
+}
+
+html.dark-mode .bg-blue-600 {
+    background-color: #2563eb !important;
+}
+
+html.dark-mode .bg-blue-700 {
+    background-color: #1d4ed8 !important;
+}
+
+html.dark-mode .text-gray-900 {
+    color: var(--text-primary) !important;
+}
+
+html.dark-mode .text-gray-800 {
+    color: var(--text-primary) !important;
+}
+
+html.dark-mode .text-gray-700 {
+    color: var(--text-secondary) !important;
+}
+
+html.dark-mode .text-gray-600 {
+    color: var(--text-secondary) !important;
+}
+
+html.dark-mode .text-gray-500 {
+    color: var(--text-tertiary) !important;
+}
+
+html.dark-mode .border-gray-300 {
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .border-t {
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .shadow-sm {
+    box-shadow: 0 1px 2px var(--shadow-color) !important;
+}
+
+html.dark-mode .bg-gray-50 {
+    background-color: var(--bg-tertiary) !important;
+}
+
+html.dark-mode .bg-red-100 {
+    background-color: #7f1d1d !important;
+}
+
+html.dark-mode .text-red-800 {
+    color: #fecaca !important;
+}
+
+html.dark-mode .bg-green-100 {
+    background-color: #064e3b !important;
+}
+
+html.dark-mode .text-green-800 {
+    color: #86efac !important;
+}
+
+/* Light mode input styling - ensure text is always dark */
+input,
+textarea,
+select {
+    color: #1f2937 !important;
+}
+
+html.dark-mode input,
+html.dark-mode textarea,
+html.dark-mode select {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode input::placeholder,
+html.dark-mode textarea::placeholder {
+    color: var(--text-tertiary) !important;
+}
+
+html.dark-mode input:focus,
+html.dark-mode textarea:focus,
+html.dark-mode select:focus {
+    border-color: #3b82f6 !important;
+}
+
+html.dark-mode label {
+    color: var(--text-primary) !important;
+}
+
+html.dark-mode button:not(.dark-toggle) {
+    color: inherit;
+}
+
+html.dark-mode a {
+    color: #60a5fa;
+}
+
+html.dark-mode a:hover {
+    color: #93c5fd;
+}
+
+/* Dark mode toggle button */
+.dark-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    color: #4b5563;
+}
+
+.dark-toggle:hover {
+    background-color: #f3f4f6;
+}
+
+html.dark-mode .dark-toggle {
+    color: #d1d5db;
+}
+
+html.dark-mode .dark-toggle:hover {
+    background-color: #374151;
+}
+
+.dark-toggle svg {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.3s ease;
+}
+
+html.dark-mode .dark-toggle svg.sun-icon {
+    display: none;
+}
+
+.dark-toggle svg.moon-icon {
+    display: none;
+}
+
+html.dark-mode .dark-toggle svg.moon-icon {
+    display: block;
+}
+
+/* Heatmap specific dark mode styles */
+html.dark-mode .heatmap-cell {
+    color: var(--text-primary);
+}
+
+html.dark-mode body {
+    background: linear-gradient(135deg, #1a1f2e 0%, #0f1419 100%);
+}
+
+html.dark-mode .bg-white\/80 {
+    background-color: rgba(31, 41, 55, 0.8) !important;
+}
+
+/* Card shadow adjustments for dark mode */
+html.dark-mode .card-shadow {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Additional dark mode adjustments */
+html.dark-mode .hover\:text-blue-700:hover {
+    color: #60a5fa !important;
+}
+
+html.dark-mode .hover\:bg-blue-700:hover {
+    background-color: #1d4ed8 !important;
+}
+
+html.dark-mode .hover\:text-gray-700:hover {
+    color: var(--text-secondary) !important;
+}
+
+html.dark-mode .hover\:text-gray-800:hover {
+    color: var(--text-primary) !important;
+}
+
+/* Dropdown/autocomplete suggestions */
+#suggestions {
+    background-color: white;
+    color: #1f2937;
+}
+
+#suggestions > div {
+    color: #1f2937;
+}
+
+html.dark-mode #suggestions {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode #suggestions > div {
+    color: var(--text-primary) !important;
+}
+
+html.dark-mode #suggestions .hover\:bg-blue-50:hover {
+    background-color: var(--hover-bg) !important;
+}
