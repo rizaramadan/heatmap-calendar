@@ -30,7 +30,7 @@ func NewHeatmapService(
 	}
 }
 
-// GetHeatmapData returns heatmap data for an entity for the specified number of days
+// GetHeatmapData returns heatmap data for an entity spanning 3 months previous and 6 months ahead from today
 func (s *HeatmapService) GetHeatmapData(ctx context.Context, entityID string, days int) (*models.HeatmapData, error) {
 	// Get the entity
 	entity, err := s.entityRepo.GetByID(ctx, entityID)
@@ -38,12 +38,13 @@ func (s *HeatmapService) GetHeatmapData(ctx context.Context, entityID string, da
 		return nil, fmt.Errorf("failed to get entity: %w", err)
 	}
 
-	// Calculate date range
+	// Calculate date range: 3 months previous and 6 months ahead
 	today := time.Now().Truncate(24 * time.Hour)
-	endDate := today.AddDate(0, 0, days)
+	startDate := today.AddDate(0, -3, 0) // 3 months before today
+	endDate := today.AddDate(0, 6, 0)    // 6 months after today
 
 	// Get capacities for the date range
-	capacities, err := s.capacityRepo.GetCapacitiesForRange(ctx, entityID, today, endDate)
+	capacities, err := s.capacityRepo.GetCapacitiesForRange(ctx, entityID, startDate, endDate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get capacities: %w", err)
 	}
@@ -51,17 +52,17 @@ func (s *HeatmapService) GetHeatmapData(ctx context.Context, entityID string, da
 	// Get loads based on entity type
 	var loads map[time.Time]float64
 	if entity.Type == models.EntityTypePerson {
-		loads, err = s.loadRepo.GetPersonLoadForDateRange(ctx, entityID, today, endDate)
+		loads, err = s.loadRepo.GetPersonLoadForDateRange(ctx, entityID, startDate, endDate)
 	} else {
-		loads, err = s.loadRepo.GetGroupLoadForDateRange(ctx, entityID, today, endDate)
+		loads, err = s.loadRepo.GetGroupLoadForDateRange(ctx, entityID, startDate, endDate)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get loads: %w", err)
 	}
 
 	// Build heatmap days
-	heatmapDays := make([]models.HeatmapDay, 0, days)
-	for d := today; !d.After(endDate); d = d.AddDate(0, 0, 1) {
+	heatmapDays := make([]models.HeatmapDay, 0, 300)
+	for d := startDate; !d.After(endDate); d = d.AddDate(0, 0, 1) {
 		load := loads[d]
 		capacity := capacities[d]
 		color := getHeatmapColor(load, capacity)
