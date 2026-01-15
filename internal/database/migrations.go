@@ -168,8 +168,8 @@ func (db *DB) SeedData(ctx context.Context) error {
 		{"Bug Fixes", 9, "bob@example.com", 2.0},
 		{"Client Meeting Prep", 10, "charlie@example.com", 1.5},
 		// Overloaded days for demo
-		{"Major Release", 5, "alice@example.com", 4.0},   // Total 6.0 for Alice on day 5 (overload!)
-		{"Sprint Planning", 5, "bob@example.com", 5.0},   // Total 7.0 for Bob on day 5 (overload!)
+		{"Major Release", 5, "alice@example.com", 4.0},    // Total 6.0 for Alice on day 5 (overload!)
+		{"Sprint Planning", 5, "bob@example.com", 5.0},    // Total 7.0 for Bob on day 5 (overload!)
 		{"Design Review", 10, "charlie@example.com", 4.0}, // Total 5.5 for Charlie (overload!)
 		{"Team Sync", 15, "alice@example.com", 2.0},
 		{"Code Freeze", 20, "bob@example.com", 1.5},

@@ -11,10 +11,10 @@ import (
 )
 
 type APIHandler struct {
-	loadService  *service.LoadService
-	entityRepo   *repository.EntityRepository
-	groupRepo    *repository.GroupRepository
-	validate     *validator.Validate
+	loadService *service.LoadService
+	entityRepo  *repository.EntityRepository
+	groupRepo   *repository.GroupRepository
+	validate    *validator.Validate
 }
 
 func NewAPIHandler(
@@ -23,10 +23,10 @@ func NewAPIHandler(
 	groupRepo *repository.GroupRepository,
 ) *APIHandler {
 	return &APIHandler{
-		loadService:  loadService,
-		entityRepo:   entityRepo,
-		groupRepo:    groupRepo,
-		validate:     validator.New(),
+		loadService: loadService,
+		entityRepo:  entityRepo,
+		groupRepo:   groupRepo,
+		validate:    validator.New(),
 	}
 }
 
