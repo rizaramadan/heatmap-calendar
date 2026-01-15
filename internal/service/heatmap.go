@@ -30,7 +30,7 @@ func NewHeatmapService(
 	}
 }
 
-// GetHeatmapData returns heatmap data for an entity for the specified number of days
+// GetHeatmapData returns heatmap data for an entity spanning 3 months previous and 6 months ahead from today
 func (s *HeatmapService) GetHeatmapData(ctx context.Context, entityID string, days int) (*models.HeatmapData, error) {
 	// Get the entity
 	entity, err := s.entityRepo.GetByID(ctx, entityID)
@@ -61,7 +61,7 @@ func (s *HeatmapService) GetHeatmapData(ctx context.Context, entityID string, da
 	}
 
 	// Build heatmap days
-	heatmapDays := make([]models.HeatmapDay, 0)
+	heatmapDays := make([]models.HeatmapDay, 0, 300)
 	for d := startDate; !d.After(endDate); d = d.AddDate(0, 0, 1) {
 		load := loads[d]
 		capacity := capacities[d]
