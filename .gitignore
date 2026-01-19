@@ -45,3 +45,5 @@ temp/
 .auto-claude/
 .claude_settings.json
 node_modules/*
+
+server

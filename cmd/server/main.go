@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/gti/heatmap-internal/docs"
 	"github.com/gti/heatmap-internal/internal/config"
 	"github.com/gti/heatmap-internal/internal/database"
 	"github.com/gti/heatmap-internal/internal/handler"
@@ -18,6 +19,7 @@ import (
 	"github.com/gti/heatmap-internal/internal/service"
 	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
+	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
 func main() {
@@ -115,6 +117,9 @@ func main() {
 
 	// Static files (if needed)
 	e.Static("/static", "static")
+
+	// Swagger API documentation
+	e.GET("/api/doc/*", echoSwagger.WrapHandler)
 
 	// Start server in goroutine
 	go func() {
