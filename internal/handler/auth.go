@@ -47,6 +47,17 @@ func (h *AuthHandler) LoginPage(c echo.Context) error {
 }
 
 // RequestOTP sends an OTP to the user's email
+// @Summary Request OTP
+// @Description Send an OTP code to the user's email for authentication
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param email body models.OTPRequest true "Email address"
+// @Success 200 {object} map[string]string "OTP sent successfully"
+// @Failure 400 {object} map[string]string "Invalid email"
+// @Failure 404 {object} map[string]string "Email not found"
+// @Failure 500 {object} map[string]string "Failed to send OTP"
+// @Router /auth/request-otp [post]
 func (h *AuthHandler) RequestOTP(c echo.Context) error {
 	var req models.OTPRequest
 
@@ -96,6 +107,16 @@ func (h *AuthHandler) RequestOTP(c echo.Context) error {
 }
 
 // VerifyOTP verifies the OTP and creates a session
+// @Summary Verify OTP
+// @Description Verify the OTP and create a session
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body models.VerifyOTPRequest true "Email and OTP"
+// @Success 200 {object} map[string]string "OTP verified, session created"
+// @Failure 400 {object} map[string]string "Invalid OTP"
+// @Failure 500 {object} map[string]string "Failed to create session"
+// @Router /auth/verify-otp [post]
 func (h *AuthHandler) VerifyOTP(c echo.Context) error {
 	var req models.VerifyOTPRequest
 
@@ -147,6 +168,12 @@ func (h *AuthHandler) VerifyOTP(c echo.Context) error {
 }
 
 // Logout clears the session
+// @Summary Logout
+// @Description End the current session
+// @Tags Authentication
+// @Produce json
+// @Success 302 "Redirect to home page"
+// @Router /auth/logout [post]
 func (h *AuthHandler) Logout(c echo.Context) error {
 	cookie, err := c.Cookie(middleware.SessionCookieName)
 	if err == nil {

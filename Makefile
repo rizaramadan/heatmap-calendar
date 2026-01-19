@@ -1,7 +1,15 @@
-.PHONY: build run dev test clean docker-up docker-down
+.PHONY: build run dev test clean docker-up docker-down docs install-swag
 
-# Build the application
-build:
+# Install swag if not present
+install-swag:
+	@which swag > /dev/null || go install github.com/swaggo/swag/cmd/swag@latest
+
+# Generate swagger docs
+docs: install-swag
+	swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
+
+# Build the application (generates docs first)
+build: docs
 	go build -o bin/server ./cmd/server
 
 # Run the application
@@ -9,7 +17,7 @@ run: build
 	./bin/server
 
 # Run in development mode with hot reload (requires air)
-dev:
+dev: docs
 	@if command -v air > /dev/null; then \
 		air; \
 	elif [ -f ~/go/bin/air ]; then \

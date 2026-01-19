@@ -1,0 +1,634 @@
+basePath: /
+definitions:
+  github_com_gti_heatmap-internal_internal_models.AddGroupMemberRequest:
+    properties:
+      person_email:
+        type: string
+    required:
+    - person_email
+    type: object
+  github_com_gti_heatmap-internal_internal_models.CreateEntityRequest:
+    properties:
+      default_capacity:
+        type: number
+      id:
+        type: string
+      title:
+        type: string
+      type:
+        enum:
+        - person
+        - group
+        type: string
+    required:
+    - id
+    - title
+    - type
+    type: object
+  github_com_gti_heatmap-internal_internal_models.Entity:
+    properties:
+      created_at:
+        type: string
+      default_capacity:
+        description: Default daily capacity
+        type: number
+      id:
+        description: email for persons, string-id for groups
+        type: string
+      title:
+        description: Display name
+        type: string
+      type:
+        allOf:
+        - $ref: '#/definitions/github_com_gti_heatmap-internal_internal_models.EntityType'
+        description: '"person" or "group"'
+    type: object
+  github_com_gti_heatmap-internal_internal_models.EntityType:
+    enum:
+    - person
+    - group
+    type: string
+    x-enum-varnames:
+    - EntityTypePerson
+    - EntityTypeGroup
+  github_com_gti_heatmap-internal_internal_models.OTPRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  github_com_gti_heatmap-internal_internal_models.UpdateCapacityRequest:
+    properties:
+      date_overrides:
+        items:
+          properties:
+            capacity:
+              minimum: 0
+              type: number
+            date:
+              description: 'Format: YYYY-MM-DD'
+              type: string
+          required:
+          - capacity
+          - date
+          type: object
+        type: array
+      default_capacity:
+        type: number
+    type: object
+  github_com_gti_heatmap-internal_internal_models.UpsertLoadRequest:
+    properties:
+      assignees:
+        items:
+          properties:
+            email:
+              type: string
+            weight:
+              description: Default 1.0
+              type: number
+          required:
+          - email
+          type: object
+        minItems: 1
+        type: array
+      date:
+        description: 'Format: YYYY-MM-DD'
+        type: string
+      external_id:
+        type: string
+      source:
+        type: string
+      title:
+        type: string
+    required:
+    - assignees
+    - date
+    - external_id
+    - title
+    type: object
+  github_com_gti_heatmap-internal_internal_models.VerifyOTPRequest:
+    properties:
+      email:
+        type: string
+      otp:
+        type: string
+    required:
+    - email
+    - otp
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@example.com
+    name: API Support
+  description: API for managing heatmap loads, entities, groups, and capacity tracking
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Heatmap Internal API
+  version: "1.0"
+paths:
+  /api/entities:
+    get:
+      description: Returns all entities or filters by type (person/group)
+      parameters:
+      - description: Filter by entity type (person or group)
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of entities
+          schema:
+            items:
+              $ref: '#/definitions/github_com_gti_heatmap-internal_internal_models.Entity'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all entities
+      tags:
+      - Entities
+    post:
+      consumes:
+      - application/json
+      description: Create a new person or group entity
+      parameters:
+      - description: Entity to create
+        in: body
+        name: entity
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gti_heatmap-internal_internal_models.CreateEntityRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created entity
+          schema:
+            $ref: '#/definitions/github_com_gti_heatmap-internal_internal_models.Entity'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Create a new entity
+      tags:
+      - Entities
+  /api/entities/{id}:
+    delete:
+      description: Delete an entity by its ID
+      parameters:
+      - description: Entity ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Entity not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Delete an entity
+      tags:
+      - Entities
+    get:
+      description: Returns a single entity by its ID
+      parameters:
+      - description: Entity ID (email for persons, string ID for groups)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Entity details
+          schema:
+            $ref: '#/definitions/github_com_gti_heatmap-internal_internal_models.Entity'
+        "404":
+          description: Entity not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get entity by ID
+      tags:
+      - Entities
+  /api/groups/{id}/members:
+    get:
+      description: Returns all members of a group
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Group members
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get group members
+      tags:
+      - Groups
+    post:
+      consumes:
+      - application/json
+      description: Add a person to a group
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Member to add
+        in: body
+        name: member
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gti_heatmap-internal_internal_models.AddGroupMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Group or person not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Add member to group
+      tags:
+      - Groups
+  /api/groups/{id}/members/{member}:
+    delete:
+      description: Remove a person from a group
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Member email to remove
+        in: path
+        name: member
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Remove member from group
+      tags:
+      - Groups
+  /api/heatmap/{entity}:
+    get:
+      description: Returns the heatmap grid partial for an entity
+      parameters:
+      - description: Entity ID
+        in: path
+        name: entity
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML partial for heatmap grid
+          schema:
+            type: string
+        "500":
+          description: Failed to load heatmap
+          schema:
+            type: string
+      summary: Get heatmap partial for entity
+      tags:
+      - Heatmap
+  /api/heatmap/{entity}/day/{date}:
+    get:
+      description: Returns the tasks/loads for a specific day
+      parameters:
+      - description: Entity ID
+        in: path
+        name: entity
+        required: true
+        type: string
+      - description: Date in YYYY-MM-DD format
+        in: path
+        name: date
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML partial for day details
+          schema:
+            type: string
+        "400":
+          description: Invalid date format
+          schema:
+            type: string
+        "500":
+          description: Failed to load day details
+          schema:
+            type: string
+      summary: Get day details for entity
+      tags:
+      - Heatmap
+  /api/loads/upsert:
+    post:
+      consumes:
+      - application/json
+      description: Create or update a load item with assignments (for n8n integration)
+      parameters:
+      - description: Load data to upsert
+        in: body
+        name: load
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gti_heatmap-internal_internal_models.UpsertLoadRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success with load ID
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Upsert a load
+      tags:
+      - Loads
+  /api/my-capacity:
+    post:
+      consumes:
+      - application/json
+      description: Update capacity settings for the currently logged-in user
+      parameters:
+      - description: Capacity update request
+        in: body
+        name: capacity
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gti_heatmap-internal_internal_models.UpdateCapacityRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update user capacity
+      tags:
+      - Capacity
+  /auth/logout:
+    post:
+      description: End the current session
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Redirect to home page
+      summary: Logout
+      tags:
+      - Authentication
+  /auth/request-otp:
+    post:
+      consumes:
+      - application/json
+      description: Send an OTP code to the user's email for authentication
+      parameters:
+      - description: Email address
+        in: body
+        name: email
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gti_heatmap-internal_internal_models.OTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTP sent successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid email
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Email not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to send OTP
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Request OTP
+      tags:
+      - Authentication
+  /auth/verify-otp:
+    post:
+      consumes:
+      - application/json
+      description: Verify the OTP and create a session
+      parameters:
+      - description: Email and OTP
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gti_heatmap-internal_internal_models.VerifyOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTP verified, session created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid OTP
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to create session
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Verify OTP
+      tags:
+      - Authentication
+securityDefinitions:
+  ApiKeyAuth:
+    description: API Key for protected endpoints
+    in: header
+    name: x-api-key
+    type: apiKey
+swagger: "2.0"

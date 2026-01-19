@@ -62,6 +62,14 @@ func (h *HeatmapHandler) Index(c echo.Context) error {
 }
 
 // GetHeatmapPartial returns the heatmap grid as an HTMX partial
+// @Summary Get heatmap partial for entity
+// @Description Returns the heatmap grid partial for an entity
+// @Tags Heatmap
+// @Produce text/html
+// @Param entity path string true "Entity ID"
+// @Success 200 {string} string "HTML partial for heatmap grid"
+// @Failure 500 {string} string "Failed to load heatmap"
+// @Router /api/heatmap/{entity} [get]
 func (h *HeatmapHandler) GetHeatmapPartial(c echo.Context) error {
 	entityID := c.Param("entity")
 
@@ -80,6 +88,16 @@ func (h *HeatmapHandler) GetHeatmapPartial(c echo.Context) error {
 }
 
 // GetDayDetails returns the tasks/loads for a specific day (HTMX partial)
+// @Summary Get day details for entity
+// @Description Returns the tasks/loads for a specific day
+// @Tags Heatmap
+// @Produce text/html
+// @Param entity path string true "Entity ID"
+// @Param date path string true "Date in YYYY-MM-DD format"
+// @Success 200 {string} string "HTML partial for day details"
+// @Failure 400 {string} string "Invalid date format"
+// @Failure 500 {string} string "Failed to load day details"
+// @Router /api/heatmap/{entity}/day/{date} [get]
 func (h *HeatmapHandler) GetDayDetails(c echo.Context) error {
 	entityID := c.Param("entity")
 	dateStr := c.Param("date")

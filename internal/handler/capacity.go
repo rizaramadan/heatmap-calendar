@@ -54,6 +54,17 @@ func (h *CapacityHandler) MyCapacityPage(c echo.Context) error {
 }
 
 // UpdateMyCapacity handles the capacity update request for the logged-in user
+// @Summary Update user capacity
+// @Description Update capacity settings for the currently logged-in user
+// @Tags Capacity
+// @Accept json
+// @Produce json
+// @Param capacity body models.UpdateCapacityRequest true "Capacity update request"
+// @Success 200 {object} map[string]string "Success message"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Not authenticated"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/my-capacity [post]
 func (h *CapacityHandler) UpdateMyCapacity(c echo.Context) error {
 	userEmail := middleware.GetUserEmail(c)
 	if userEmail == "" {

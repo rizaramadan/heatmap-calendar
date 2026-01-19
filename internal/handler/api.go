@@ -31,6 +31,18 @@ func NewAPIHandler(
 }
 
 // UpsertLoad handles the n8n integration endpoint for creating/updating loads
+// @Summary Upsert a load
+// @Description Create or update a load item with assignments (for n8n integration)
+// @Tags Loads
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param load body models.UpsertLoadRequest true "Load data to upsert"
+// @Success 200 {object} map[string]interface{} "Success with load ID"
+// @Failure 400 {object} map[string]string "Invalid request body"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/loads/upsert [post]
 func (h *APIHandler) UpsertLoad(c echo.Context) error {
 	var req models.UpsertLoadRequest
 	if err := c.Bind(&req); err != nil {
@@ -59,6 +71,14 @@ func (h *APIHandler) UpsertLoad(c echo.Context) error {
 }
 
 // ListEntities returns all entities
+// @Summary List all entities
+// @Description Returns all entities or filters by type (person/group)
+// @Tags Entities
+// @Produce json
+// @Param type query string false "Filter by entity type (person or group)"
+// @Success 200 {array} models.Entity "List of entities"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/entities [get]
 func (h *APIHandler) ListEntities(c echo.Context) error {
 	entityType := c.QueryParam("type")
 
@@ -84,6 +104,15 @@ func (h *APIHandler) ListEntities(c echo.Context) error {
 }
 
 // GetEntity returns a single entity by ID
+// @Summary Get entity by ID
+// @Description Returns a single entity by its ID
+// @Tags Entities
+// @Produce json
+// @Param id path string true "Entity ID (email for persons, string ID for groups)"
+// @Success 200 {object} models.Entity "Entity details"
+// @Failure 404 {object} map[string]string "Entity not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/entities/{id} [get]
 func (h *APIHandler) GetEntity(c echo.Context) error {
 	id := c.Param("id")
 
@@ -103,6 +132,18 @@ func (h *APIHandler) GetEntity(c echo.Context) error {
 }
 
 // CreateEntity creates a new entity
+// @Summary Create a new entity
+// @Description Create a new person or group entity
+// @Tags Entities
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param entity body models.CreateEntityRequest true "Entity to create"
+// @Success 201 {object} models.Entity "Created entity"
+// @Failure 400 {object} map[string]string "Invalid request body"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/entities [post]
 func (h *APIHandler) CreateEntity(c echo.Context) error {
 	var req models.CreateEntityRequest
 	if err := c.Bind(&req); err != nil {
@@ -139,6 +180,17 @@ func (h *APIHandler) CreateEntity(c echo.Context) error {
 }
 
 // DeleteEntity deletes an entity
+// @Summary Delete an entity
+// @Description Delete an entity by its ID
+// @Tags Entities
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "Entity ID"
+// @Success 200 {object} map[string]string "Success message"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "Entity not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/entities/{id} [delete]
 func (h *APIHandler) DeleteEntity(c echo.Context) error {
 	id := c.Param("id")
 
@@ -159,6 +211,16 @@ func (h *APIHandler) DeleteEntity(c echo.Context) error {
 }
 
 // GetGroupMembers returns members of a group
+// @Summary Get group members
+// @Description Returns all members of a group
+// @Tags Groups
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "Group ID"
+// @Success 200 {object} map[string]interface{} "Group members"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/groups/{id}/members [get]
 func (h *APIHandler) GetGroupMembers(c echo.Context) error {
 	groupID := c.Param("id")
 
@@ -176,6 +238,20 @@ func (h *APIHandler) GetGroupMembers(c echo.Context) error {
 }
 
 // AddGroupMember adds a member to a group
+// @Summary Add member to group
+// @Description Add a person to a group
+// @Tags Groups
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "Group ID"
+// @Param member body models.AddGroupMemberRequest true "Member to add"
+// @Success 200 {object} map[string]string "Success message"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "Group or person not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/groups/{id}/members [post]
 func (h *APIHandler) AddGroupMember(c echo.Context) error {
 	groupID := c.Param("id")
 
@@ -230,6 +306,17 @@ func (h *APIHandler) AddGroupMember(c echo.Context) error {
 }
 
 // RemoveGroupMember removes a member from a group
+// @Summary Remove member from group
+// @Description Remove a person from a group
+// @Tags Groups
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "Group ID"
+// @Param member path string true "Member email to remove"
+// @Success 200 {object} map[string]string "Success message"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/groups/{id}/members/{member} [delete]
 func (h *APIHandler) RemoveGroupMember(c echo.Context) error {
 	groupID := c.Param("id")
 	memberEmail := c.Param("member")
