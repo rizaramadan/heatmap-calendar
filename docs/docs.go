@@ -1133,6 +1133,10 @@ const docTemplate = `{
                 },
                 "title": {
                     "type": "string"
+                },
+                "url": {
+                    "description": "Link back to original platform",
+                    "type": "string"
                 }
             }
         },
