@@ -29,14 +29,15 @@ func (r *LoadRepository) UpsertByExternalID(ctx context.Context, load *models.Lo
 
 	// Upsert the load
 	err = tx.QueryRow(ctx,
-		`INSERT INTO loads (external_id, title, source, date)
-		 VALUES ($1, $2, $3, $4)
+		`INSERT INTO loads (external_id, title, source, url, date)
+		 VALUES ($1, $2, $3, $4, $5)
 		 ON CONFLICT (external_id) DO UPDATE SET
 		   title = EXCLUDED.title,
 		   source = EXCLUDED.source,
+		   url = EXCLUDED.url,
 		   date = EXCLUDED.date
 		 RETURNING id`,
-		load.ExternalID, load.Title, load.Source, load.Date.Truncate(24*time.Hour)).Scan(&loadID)
+		load.ExternalID, load.Title, load.Source, load.URL, load.Date.Truncate(24*time.Hour)).Scan(&loadID)
 
 	if err != nil {
 		return 0, fmt.Errorf("failed to upsert load: %w", err)
@@ -70,8 +71,8 @@ func (r *LoadRepository) UpsertByExternalID(ctx context.Context, load *models.Lo
 func (r *LoadRepository) GetByID(ctx context.Context, id int) (*models.LoadWithAssignments, error) {
 	load := &models.Load{}
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, external_id, title, source, date FROM loads WHERE id = $1`, id).Scan(
-		&load.ID, &load.ExternalID, &load.Title, &load.Source, &load.Date)
+		`SELECT id, external_id, title, source, url, date FROM loads WHERE id = $1`, id).Scan(
+		&load.ID, &load.ExternalID, &load.Title, &load.Source, &load.URL, &load.Date)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get load: %w", err)
 	}
@@ -101,7 +102,7 @@ func (r *LoadRepository) GetByID(ctx context.Context, id int) (*models.LoadWithA
 // GetLoadsByDateRange retrieves all loads within a date range
 func (r *LoadRepository) GetLoadsByDateRange(ctx context.Context, start, end time.Time) ([]models.LoadWithAssignments, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT l.id, l.external_id, l.title, l.source, l.date,
+		`SELECT l.id, l.external_id, l.title, l.source, l.url, l.date,
 		        la.person_email, la.weight
 		 FROM loads l
 		 LEFT JOIN load_assignments la ON l.id = la.load_id
@@ -122,12 +123,13 @@ func (r *LoadRepository) GetLoadsByDateRange(ctx context.Context, start, end tim
 			externalID  *string
 			title       string
 			source      *string
+			url         *string
 			date        time.Time
 			personEmail *string
 			weight      *float64
 		)
 
-		if err := rows.Scan(&loadID, &externalID, &title, &source, &date, &personEmail, &weight); err != nil {
+		if err := rows.Scan(&loadID, &externalID, &title, &source, &url, &date, &personEmail, &weight); err != nil {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 
@@ -138,6 +140,7 @@ func (r *LoadRepository) GetLoadsByDateRange(ctx context.Context, start, end tim
 					ExternalID: externalID,
 					Title:      title,
 					Source:     source,
+					URL:        url,
 					Date:       date,
 				},
 				Assignments: []models.LoadAssignment{},
@@ -244,7 +247,7 @@ func (r *LoadRepository) GetLoadsForEntityOnDate(ctx context.Context, entityID s
 	var query string
 	if entityType == models.EntityTypePerson {
 		query = `
-			SELECT l.id, l.external_id, l.title, l.source, l.date,
+			SELECT l.id, l.external_id, l.title, l.source, l.url, l.date,
 			       la.person_email, la.weight
 			FROM loads l
 			JOIN load_assignments la ON l.id = la.load_id
@@ -252,7 +255,7 @@ func (r *LoadRepository) GetLoadsForEntityOnDate(ctx context.Context, entityID s
 			ORDER BY l.id`
 	} else {
 		query = `
-			SELECT DISTINCT l.id, l.external_id, l.title, l.source, l.date,
+			SELECT DISTINCT l.id, l.external_id, l.title, l.source, l.url, l.date,
 			       la.person_email, la.weight
 			FROM loads l
 			JOIN load_assignments la ON l.id = la.load_id
@@ -276,12 +279,13 @@ func (r *LoadRepository) GetLoadsForEntityOnDate(ctx context.Context, entityID s
 			externalID  *string
 			title       string
 			source      *string
+			url         *string
 			loadDate    time.Time
 			personEmail string
 			weight      float64
 		)
 
-		if err := rows.Scan(&loadID, &externalID, &title, &source, &loadDate, &personEmail, &weight); err != nil {
+		if err := rows.Scan(&loadID, &externalID, &title, &source, &url, &loadDate, &personEmail, &weight); err != nil {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 
@@ -292,6 +296,7 @@ func (r *LoadRepository) GetLoadsForEntityOnDate(ctx context.Context, entityID s
 					ExternalID: externalID,
 					Title:      title,
 					Source:     source,
+					URL:        url,
 					Date:       loadDate,
 				},
 				Assignments: []models.LoadAssignment{},
