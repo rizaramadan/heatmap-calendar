@@ -11,10 +11,13 @@ import (
 func (db *DB) RunMigrations(ctx context.Context) error {
 	log.Println("Running database migrations...")
 
-	// Create tables
+	// Create schema for this application
 	schema := `
+	-- Create custom schema for load calendar data
+	CREATE SCHEMA IF NOT EXISTS load_calendar_data;
+
 	-- Create entities table (persons and groups)
-	CREATE TABLE IF NOT EXISTS entities (
+	CREATE TABLE IF NOT EXISTS load_calendar_data.entities (
 		id TEXT PRIMARY KEY,
 		title TEXT NOT NULL,
 		type TEXT CHECK (type IN ('person', 'group')),
@@ -23,22 +26,22 @@ func (db *DB) RunMigrations(ctx context.Context) error {
 	);
 
 	-- Create group_members table
-	CREATE TABLE IF NOT EXISTS group_members (
-		group_id TEXT REFERENCES entities(id) ON DELETE CASCADE,
-		person_email TEXT REFERENCES entities(id) ON DELETE CASCADE,
+	CREATE TABLE IF NOT EXISTS load_calendar_data.group_members (
+		group_id TEXT REFERENCES load_calendar_data.entities(id) ON DELETE CASCADE,
+		person_email TEXT REFERENCES load_calendar_data.entities(id) ON DELETE CASCADE,
 		PRIMARY KEY (group_id, person_email)
 	);
 
 	-- Create capacity_overrides table
-	CREATE TABLE IF NOT EXISTS capacity_overrides (
-		entity_id TEXT REFERENCES entities(id) ON DELETE CASCADE,
+	CREATE TABLE IF NOT EXISTS load_calendar_data.capacity_overrides (
+		entity_id TEXT REFERENCES load_calendar_data.entities(id) ON DELETE CASCADE,
 		date DATE NOT NULL,
 		capacity FLOAT NOT NULL,
 		PRIMARY KEY (entity_id, date)
 	);
 
 	-- Create loads table
-	CREATE TABLE IF NOT EXISTS loads (
+	CREATE TABLE IF NOT EXISTS load_calendar_data.loads (
 		id SERIAL PRIMARY KEY,
 		external_id TEXT UNIQUE,
 		title TEXT NOT NULL,
@@ -48,9 +51,9 @@ func (db *DB) RunMigrations(ctx context.Context) error {
 	);
 
 	-- Create load_assignments table
-	CREATE TABLE IF NOT EXISTS load_assignments (
-		load_id INTEGER REFERENCES loads(id) ON DELETE CASCADE,
-		person_email TEXT REFERENCES entities(id) ON DELETE CASCADE,
+	CREATE TABLE IF NOT EXISTS load_calendar_data.load_assignments (
+		load_id INTEGER REFERENCES load_calendar_data.loads(id) ON DELETE CASCADE,
+		person_email TEXT REFERENCES load_calendar_data.entities(id) ON DELETE CASCADE,
 		weight FLOAT DEFAULT 1.0,
 		PRIMARY KEY (load_id, person_email)
 	);
@@ -60,32 +63,32 @@ func (db *DB) RunMigrations(ctx context.Context) error {
 	BEGIN
 		IF NOT EXISTS (
 			SELECT 1 FROM information_schema.columns
-			WHERE table_name='loads' AND column_name='url'
+			WHERE table_schema='load_calendar_data' AND table_name='loads' AND column_name='url'
 		) THEN
-			ALTER TABLE loads ADD COLUMN url TEXT;
+			ALTER TABLE load_calendar_data.loads ADD COLUMN url TEXT;
 		END IF;
 	END $$;
 
 	-- Create indexes for performance
-	CREATE INDEX IF NOT EXISTS idx_loads_date ON loads(date);
-	CREATE INDEX IF NOT EXISTS idx_loads_external_id ON loads(external_id);
-	CREATE INDEX IF NOT EXISTS idx_load_assignments_person ON load_assignments(person_email);
-	CREATE INDEX IF NOT EXISTS idx_capacity_overrides_date ON capacity_overrides(entity_id, date);
+	CREATE INDEX IF NOT EXISTS idx_loads_date ON load_calendar_data.loads(date);
+	CREATE INDEX IF NOT EXISTS idx_loads_external_id ON load_calendar_data.loads(external_id);
+	CREATE INDEX IF NOT EXISTS idx_load_assignments_person ON load_calendar_data.load_assignments(person_email);
+	CREATE INDEX IF NOT EXISTS idx_capacity_overrides_date ON load_calendar_data.capacity_overrides(entity_id, date);
 
 	-- Create OTP sessions table (in-memory alternative would be better for production)
-	CREATE TABLE IF NOT EXISTS otp_records (
+	CREATE TABLE IF NOT EXISTS load_calendar_data.otp_records (
 		email TEXT PRIMARY KEY,
 		otp TEXT NOT NULL,
 		expires_at TIMESTAMP WITH TIME ZONE NOT NULL
 	);
 
 	-- Create sessions table
-	CREATE TABLE IF NOT EXISTS sessions (
+	CREATE TABLE IF NOT EXISTS load_calendar_data.sessions (
 		token TEXT PRIMARY KEY,
 		email TEXT NOT NULL,
 		expires_at TIMESTAMP WITH TIME ZONE NOT NULL
 	);
-	CREATE INDEX IF NOT EXISTS idx_sessions_email ON sessions(email);
+	CREATE INDEX IF NOT EXISTS idx_sessions_email ON load_calendar_data.sessions(email);
 	`
 
 	_, err := db.Pool.Exec(ctx, schema)
@@ -101,7 +104,7 @@ func (db *DB) RunMigrations(ctx context.Context) error {
 func (db *DB) SeedData(ctx context.Context) error {
 	// Check if data already exists
 	var count int
-	err := db.Pool.QueryRow(ctx, "SELECT COUNT(*) FROM entities").Scan(&count)
+	err := db.Pool.QueryRow(ctx, "SELECT COUNT(*) FROM load_calendar_data.entities").Scan(&count)
 	if err != nil {
 		return fmt.Errorf("failed to check entity count: %w", err)
 	}
@@ -126,7 +129,7 @@ func (db *DB) SeedData(ctx context.Context) error {
 
 	for _, p := range persons {
 		_, err := db.Pool.Exec(ctx,
-			"INSERT INTO entities (id, title, type, default_capacity) VALUES ($1, $2, 'person', $3)",
+			"INSERT INTO load_calendar_data.entities (id, title, type, default_capacity) VALUES ($1, $2, 'person', $3)",
 			p.ID, p.Title, p.Capacity)
 		if err != nil {
 			return fmt.Errorf("failed to create person %s: %w", p.ID, err)
@@ -145,7 +148,7 @@ func (db *DB) SeedData(ctx context.Context) error {
 
 	for _, g := range groups {
 		_, err := db.Pool.Exec(ctx,
-			"INSERT INTO entities (id, title, type, default_capacity) VALUES ($1, $2, 'group', 10.0)",
+			"INSERT INTO load_calendar_data.entities (id, title, type, default_capacity) VALUES ($1, $2, 'group', 10.0)",
 			g.ID, g.Title)
 		if err != nil {
 			return fmt.Errorf("failed to create group %s: %w", g.ID, err)
@@ -153,7 +156,7 @@ func (db *DB) SeedData(ctx context.Context) error {
 
 		for _, member := range g.Members {
 			_, err := db.Pool.Exec(ctx,
-				"INSERT INTO group_members (group_id, person_email) VALUES ($1, $2)",
+				"INSERT INTO load_calendar_data.group_members (group_id, person_email) VALUES ($1, $2)",
 				g.ID, member)
 			if err != nil {
 				return fmt.Errorf("failed to add member %s to group %s: %w", member, g.ID, err)
@@ -195,14 +198,14 @@ func (db *DB) SeedData(ctx context.Context) error {
 
 		var loadID int
 		err := db.Pool.QueryRow(ctx,
-			"INSERT INTO loads (external_id, title, source, date) VALUES ($1, $2, 'seed', $3) RETURNING id",
+			"INSERT INTO load_calendar_data.loads (external_id, title, source, date) VALUES ($1, $2, 'seed', $3) RETURNING id",
 			externalID, load.Title, loadDate).Scan(&loadID)
 		if err != nil {
 			return fmt.Errorf("failed to create load %s: %w", load.Title, err)
 		}
 
 		_, err = db.Pool.Exec(ctx,
-			"INSERT INTO load_assignments (load_id, person_email, weight) VALUES ($1, $2, $3)",
+			"INSERT INTO load_calendar_data.load_assignments (load_id, person_email, weight) VALUES ($1, $2, $3)",
 			loadID, load.Assignee, load.Weight)
 		if err != nil {
 			return fmt.Errorf("failed to assign load %s: %w", load.Title, err)
