@@ -40,6 +40,7 @@ type Load struct {
 	ExternalID *string   `json:"external_id,omitempty"` // For n8n/external system deduplication
 	Title      string    `json:"title"`
 	Source     *string   `json:"source,omitempty"` // Origin system (gcal, crm, etc.)
+	URL        *string   `json:"url,omitempty"`    // Link back to original platform (gcal, lark, etc.)
 	Date       time.Time `json:"date"`
 }
 
@@ -91,6 +92,7 @@ type UpsertLoadRequest struct {
 	ExternalID string `json:"external_id" validate:"required"`
 	Title      string `json:"title" validate:"required"`
 	Source     string `json:"source,omitempty"`
+	URL        string `json:"url,omitempty"` // Link back to original platform
 	Date       string `json:"date" validate:"required"` // Format: YYYY-MM-DD
 	Assignees  []struct {
 		Email  string  `json:"email" validate:"required,email"`

@@ -43,6 +43,7 @@ func (db *DB) RunMigrations(ctx context.Context) error {
 		external_id TEXT UNIQUE,
 		title TEXT NOT NULL,
 		source TEXT,
+		url TEXT,
 		date DATE NOT NULL
 	);
 
@@ -53,6 +54,17 @@ func (db *DB) RunMigrations(ctx context.Context) error {
 		weight FLOAT DEFAULT 1.0,
 		PRIMARY KEY (load_id, person_email)
 	);
+
+	-- Add URL column to loads table if it doesn't exist (migration for existing databases)
+	DO $$
+	BEGIN
+		IF NOT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_name='loads' AND column_name='url'
+		) THEN
+			ALTER TABLE loads ADD COLUMN url TEXT;
+		END IF;
+	END $$;
 
 	-- Create indexes for performance
 	CREATE INDEX IF NOT EXISTS idx_loads_date ON loads(date);

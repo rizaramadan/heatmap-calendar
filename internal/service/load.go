@@ -49,10 +49,12 @@ func (s *LoadService) UpsertLoad(ctx context.Context, req *models.UpsertLoadRequ
 	// Build load and assignments
 	externalID := req.ExternalID
 	source := req.Source
+	url := req.URL
 	load := &models.Load{
 		ExternalID: &externalID,
 		Title:      req.Title,
 		Source:     &source,
+		URL:        &url,
 		Date:       date,
 	}
 
