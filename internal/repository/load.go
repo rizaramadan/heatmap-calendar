@@ -343,3 +343,50 @@ func (r *LoadRepository) Delete(ctx context.Context, id int) error {
 	}
 	return nil
 }
+
+// AddAssignees adds one or more assignees to a load
+// Uses INSERT ON CONFLICT to handle duplicate assignments (updates weight if assignee already exists)
+func (r *LoadRepository) AddAssignees(ctx context.Context, loadID int, assignments []models.LoadAssignment) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Insert or update assignments
+	for _, a := range assignments {
+		_, err = tx.Exec(ctx,
+			`INSERT INTO load_assignments (load_id, person_email, weight)
+			 VALUES ($1, $2, $3)
+			 ON CONFLICT (load_id, person_email) DO UPDATE SET
+			   weight = EXCLUDED.weight`,
+			loadID, a.PersonEmail, a.Weight)
+		if err != nil {
+			return fmt.Errorf("failed to insert assignment: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+// RemoveAssignee removes a specific assignee from a load
+func (r *LoadRepository) RemoveAssignee(ctx context.Context, loadID int, personEmail string) error {
+	result, err := r.pool.Exec(ctx,
+		`DELETE FROM load_assignments WHERE load_id = $1 AND person_email = $2`,
+		loadID, personEmail)
+	if err != nil {
+		return fmt.Errorf("failed to remove assignee: %w", err)
+	}
+
+	// Check if any rows were affected
+	rowsAffected := result.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("assignee not found for this load")
+	}
+
+	return nil
+}

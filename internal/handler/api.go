@@ -331,3 +331,105 @@ func (h *APIHandler) RemoveGroupMember(c echo.Context) error {
 		"success": "member removed",
 	})
 }
+
+// AddAssigneesToLoad adds one or more assignees to an existing load
+// @Summary Add assignees to a load
+// @Description Add one or more assignees to an existing load with optional weight
+// @Tags Loads
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path int true "Load ID"
+// @Param assignees body models.AddAssigneeRequest true "Assignees to add"
+// @Success 200 {object} map[string]string "Success message"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "Load not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/loads/{id}/assignees [post]
+func (h *APIHandler) AddAssigneesToLoad(c echo.Context) error {
+	loadID := 0
+	if err := echo.PathParamsBinder(c).Int("id", &loadID).BindError(); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "invalid load ID",
+		})
+	}
+
+	var req models.AddAssigneeRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "invalid request body",
+		})
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": err.Error(),
+		})
+	}
+
+	if err := h.loadService.AddAssignees(c.Request().Context(), loadID, &req); err != nil {
+		if err.Error() == "load not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{
+				"error": "load not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"success": "assignees added",
+	})
+}
+
+// RemoveAssigneeFromLoad removes a specific assignee from a load
+// @Summary Remove assignee from load
+// @Description Remove a specific assignee from a load
+// @Tags Loads
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path int true "Load ID"
+// @Param email path string true "Assignee email to remove"
+// @Success 200 {object} map[string]string "Success message"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "Load or assignee not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/loads/{id}/assignees/{email} [delete]
+func (h *APIHandler) RemoveAssigneeFromLoad(c echo.Context) error {
+	loadID := 0
+	if err := echo.PathParamsBinder(c).Int("id", &loadID).BindError(); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "invalid load ID",
+		})
+	}
+
+	email := c.Param("email")
+	if email == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "email parameter is required",
+		})
+	}
+
+	if err := h.loadService.RemoveAssignee(c.Request().Context(), loadID, email); err != nil {
+		if err.Error() == "load not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{
+				"error": "load not found",
+			})
+		}
+		if err.Error() == "assignee not found for this load" {
+			return c.JSON(http.StatusNotFound, map[string]string{
+				"error": "assignee not found for this load",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"success": "assignee removed",
+	})
+}
