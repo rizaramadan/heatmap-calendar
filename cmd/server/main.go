@@ -128,6 +128,8 @@ func main() {
 	apiProtected := e.Group("/api")
 	apiProtected.Use(middleware.APIKeyAuth(cfg.APIKey))
 	apiProtected.POST("/loads/upsert", apiHandler.UpsertLoad)
+	apiProtected.POST("/loads/:id/assignees", apiHandler.AddAssigneesToLoad)
+	apiProtected.DELETE("/loads/:id/assignees/:email", apiHandler.RemoveAssigneeFromLoad)
 	apiProtected.POST("/entities", apiHandler.CreateEntity)
 	apiProtected.DELETE("/entities/:id", apiHandler.DeleteEntity)
 	apiProtected.GET("/groups/:id/members", apiHandler.GetGroupMembers)

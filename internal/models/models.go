@@ -139,3 +139,11 @@ type WebhookAlertPayload struct {
 type AddGroupMemberRequest struct {
 	PersonEmail string `json:"person_email" validate:"required,email"`
 }
+
+// AddAssigneeRequest is the request body for adding assignee(s) to a load
+type AddAssigneeRequest struct {
+	Assignees []struct {
+		Email  string  `json:"email" validate:"required,email"`
+		Weight float64 `json:"weight,omitempty"` // Default 1.0
+	} `json:"assignees" validate:"required,min=1,dive"`
+}
