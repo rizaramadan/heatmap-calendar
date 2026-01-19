@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gti/heatmap-internal/internal/models"
@@ -369,9 +370,15 @@ func (h *APIHandler) AddAssigneesToLoad(c echo.Context) error {
 	}
 
 	if err := h.loadService.AddAssignees(c.Request().Context(), loadID, &req); err != nil {
-		if err.Error() == "load not found" {
+		errMsg := err.Error()
+		if strings.HasPrefix(errMsg, "load not found") {
 			return c.JSON(http.StatusNotFound, map[string]string{
 				"error": "load not found",
+			})
+		}
+		if strings.HasPrefix(errMsg, "assignee not found") {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": errMsg,
 			})
 		}
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -414,12 +421,13 @@ func (h *APIHandler) RemoveAssigneeFromLoad(c echo.Context) error {
 	}
 
 	if err := h.loadService.RemoveAssignee(c.Request().Context(), loadID, email); err != nil {
-		if err.Error() == "load not found" {
+		errMsg := err.Error()
+		if strings.HasPrefix(errMsg, "load not found") {
 			return c.JSON(http.StatusNotFound, map[string]string{
 				"error": "load not found",
 			})
 		}
-		if err.Error() == "assignee not found for this load" {
+		if strings.Contains(errMsg, "assignee not found for this load") {
 			return c.JSON(http.StatusNotFound, map[string]string{
 				"error": "assignee not found for this load",
 			})
