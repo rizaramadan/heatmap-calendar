@@ -6,7 +6,7 @@ install-swag:
 
 # Generate swagger docs
 docs: install-swag
-	swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
+	$(shell go env GOPATH)/bin/swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
 
 # Build the application (generates docs first)
 build: docs

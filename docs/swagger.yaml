@@ -1,5 +1,23 @@
 basePath: /
 definitions:
+  github_com_gti_heatmap-internal_internal_models.AddAssigneeRequest:
+    properties:
+      assignees:
+        items:
+          properties:
+            email:
+              type: string
+            weight:
+              description: Default 1.0
+              type: number
+          required:
+          - email
+          type: object
+        minItems: 1
+        type: array
+    required:
+    - assignees
+    type: object
   github_com_gti_heatmap-internal_internal_models.AddGroupMemberRequest:
     properties:
       person_email:
@@ -451,6 +469,113 @@ paths:
       summary: Get day details for entity
       tags:
       - Heatmap
+  /api/loads/{id}/assignees:
+    post:
+      consumes:
+      - application/json
+      description: Add one or more assignees to an existing load with optional weight
+      parameters:
+      - description: Load ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Assignees to add
+        in: body
+        name: assignees
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_gti_heatmap-internal_internal_models.AddAssigneeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Load not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Add assignees to a load
+      tags:
+      - Loads
+  /api/loads/{id}/assignees/{email}:
+    delete:
+      description: Remove a specific assignee from a load
+      parameters:
+      - description: Load ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Assignee email to remove
+        in: path
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Load or assignee not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Remove assignee from load
+      tags:
+      - Loads
   /api/loads/upsert:
     post:
       consumes:
