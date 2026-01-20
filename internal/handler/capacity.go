@@ -50,7 +50,7 @@ func (h *CapacityHandler) MyCapacityPage(c echo.Context) error {
 		"UserEmail":       userEmail,
 	}
 
-	return h.templates.ExecuteTemplate(c.Response().Writer, "capacity_form.html", data)
+	return h.templates.ExecuteTemplate(c.Response().Writer, "capacity_form", data)
 }
 
 // UpdateMyCapacity handles the capacity update request for the logged-in user

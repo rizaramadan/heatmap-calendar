@@ -664,6 +664,47 @@ paths:
       summary: Update user capacity
       tags:
       - Capacity
+  /api/my-capacity/override/{date}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a specific date override for the currently logged-in user
+      parameters:
+      - description: Date in YYYY-MM-DD format
+        in: path
+        name: date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid date format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete capacity override
+      tags:
+      - Capacity
   /auth/logout:
     post:
       description: End the current session
