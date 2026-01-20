@@ -1,18 +1,20 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"math/big"
+	"net/http"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/mailgun/mailgun-go/v4"
 )
 
 var (
@@ -22,20 +24,18 @@ var (
 )
 
 type AuthService struct {
-	pool          *pgxpool.Pool
-	mailgunDomain string
-	mailgunAPIKey string
-	otpExpiry     time.Duration
-	sessionExpiry time.Duration
+	pool            *pgxpool.Pool
+	larkBearerToken string
+	otpExpiry       time.Duration
+	sessionExpiry   time.Duration
 }
 
-func NewAuthService(pool *pgxpool.Pool, mailgunDomain, mailgunAPIKey string) *AuthService {
+func NewAuthService(pool *pgxpool.Pool, larkBearerToken string) *AuthService {
 	return &AuthService{
-		pool:          pool,
-		mailgunDomain: mailgunDomain,
-		mailgunAPIKey: mailgunAPIKey,
-		otpExpiry:     10 * time.Minute,
-		sessionExpiry: 24 * time.Hour * 7, // 7 days
+		pool:            pool,
+		larkBearerToken: larkBearerToken,
+		otpExpiry:       10 * time.Minute,
+		sessionExpiry:   24 * time.Hour * 7, // 7 days
 	}
 }
 
@@ -59,10 +59,10 @@ func (s *AuthService) SendOTP(ctx context.Context, email string) error {
 		return fmt.Errorf("failed to store OTP: %w", err)
 	}
 
-	// Send email via Mailgun
-	if s.mailgunAPIKey != "" && s.mailgunDomain != "" {
-		if err := s.sendOTPEmail(ctx, email, otp); err != nil {
-			log.Printf("Failed to send OTP email: %v", err)
+	// Send OTP via Lark API
+	if s.larkBearerToken != "" {
+		if err := s.sendOTPViaLark(ctx, email, otp); err != nil {
+			log.Printf("Failed to send OTP via Lark: %v", err)
 			// Continue anyway - log the OTP for development
 		}
 	}
@@ -172,23 +172,48 @@ func (s *AuthService) CleanExpiredSessions(ctx context.Context) error {
 	return nil
 }
 
-// sendOTPEmail sends the OTP via Mailgun
-func (s *AuthService) sendOTPEmail(ctx context.Context, email, otp string) error {
-	mg := mailgun.NewMailgun(s.mailgunDomain, s.mailgunAPIKey)
+// sendOTPViaLark sends the OTP via Lark API
+func (s *AuthService) sendOTPViaLark(ctx context.Context, email, otp string) error {
+	// Prepare the request body
+	requestBody := map[string]interface{}{
+		"receive_id": email,
+		"msg_type":   "text",
+		"content":    fmt.Sprintf("{\"text\":\" THE OTP CODE: %s\"}", otp),
+		"uuid":       uuid.New().String(),
+	}
 
-	message := mg.NewMessage(
-		fmt.Sprintf("Load Calendar <noreply@%s>", s.mailgunDomain),
-		"Your Login Code",
-		fmt.Sprintf("Your login code is: %s\n\nThis code expires in 10 minutes.", otp),
-		email,
-	)
-
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	_, _, err := mg.Send(ctx, message)
+	jsonBody, err := json.Marshal(requestBody)
 	if err != nil {
-		return fmt.Errorf("failed to send email: %w", err)
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	// Create HTTP request
+	req, err := http.NewRequestWithContext(ctx, "POST",
+		"https://open.larksuite.com/open-apis/im/v1/messages?receive_id_type=email",
+		bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.larkBearerToken))
+
+	// Send request with timeout
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response status
+	if resp.StatusCode != http.StatusOK {
+		var result map[string]interface{}
+		json.NewDecoder(resp.Body).Decode(&result)
+		return fmt.Errorf("lark API returned status %d: %v", resp.StatusCode, result)
 	}
 
 	return nil
