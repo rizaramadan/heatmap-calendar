@@ -35,14 +35,23 @@ func (s *LoadService) UpsertLoad(ctx context.Context, req *models.UpsertLoadRequ
 		return 0, fmt.Errorf("invalid date format: %w", err)
 	}
 
-	// Validate all assignees exist
+	// Ensure all assignees exist, create missing ones
 	for _, a := range req.Assignees {
 		exists, err := s.entityRepo.Exists(ctx, a.Email)
 		if err != nil {
 			return 0, fmt.Errorf("failed to check assignee: %w", err)
 		}
 		if !exists {
-			return 0, fmt.Errorf("assignee not found: %s", a.Email)
+			// Auto-create missing person entity with default capacity
+			newEntity := &models.Entity{
+				ID:              a.Email,
+				Title:           a.Email, // Use email as default title
+				Type:            models.EntityTypePerson,
+				DefaultCapacity: 5.0, // Default daily capacity
+			}
+			if err := s.entityRepo.Create(ctx, newEntity); err != nil {
+				return 0, fmt.Errorf("failed to create assignee %s: %w", a.Email, err)
+			}
 		}
 	}
 
@@ -102,14 +111,23 @@ func (s *LoadService) AddAssignees(ctx context.Context, loadID int, req *models.
 		return fmt.Errorf("load not found: %w", err)
 	}
 
-	// Validate all assignees exist
+	// Ensure all assignees exist, create missing ones
 	for _, a := range req.Assignees {
 		exists, err := s.entityRepo.Exists(ctx, a.Email)
 		if err != nil {
 			return fmt.Errorf("failed to check assignee: %w", err)
 		}
 		if !exists {
-			return fmt.Errorf("assignee not found: %s", a.Email)
+			// Auto-create missing person entity with default capacity
+			newEntity := &models.Entity{
+				ID:              a.Email,
+				Title:           a.Email, // Use email as default title
+				Type:            models.EntityTypePerson,
+				DefaultCapacity: 5.0, // Default daily capacity
+			}
+			if err := s.entityRepo.Create(ctx, newEntity); err != nil {
+				return fmt.Errorf("failed to create assignee %s: %w", a.Email, err)
+			}
 		}
 	}
 
