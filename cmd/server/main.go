@@ -117,6 +117,7 @@ func main() {
 	protected.Use(middleware.SessionAuth(authService))
 	protected.GET("/my-capacity", capacityHandler.MyCapacityPage)
 	protected.POST("/api/my-capacity", capacityHandler.UpdateMyCapacity)
+	protected.DELETE("/api/my-capacity/override/:date", capacityHandler.DeleteMyCapacityOverride)
 
 	// Public API routes
 	e.GET("/api/entities", apiHandler.ListEntities)

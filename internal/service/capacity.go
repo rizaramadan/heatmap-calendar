@@ -55,7 +55,12 @@ func (s *CapacityService) SetDateOverride(ctx context.Context, entityID string, 
 }
 
 // DeleteDateOverride removes a capacity override for a specific date
-func (s *CapacityService) DeleteDateOverride(ctx context.Context, entityID string, date time.Time) error {
+func (s *CapacityService) DeleteDateOverride(ctx context.Context, entityID string, dateStr string) error {
+	date, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return fmt.Errorf("invalid date format: %w", err)
+	}
+
 	return s.capacityRepo.DeleteOverride(ctx, entityID, date)
 }
 
@@ -66,11 +71,13 @@ func (s *CapacityService) GetCapacityInfo(ctx context.Context, entityID string) 
 		return nil, nil, fmt.Errorf("failed to get entity: %w", err)
 	}
 
-	// Get overrides for the next 90 days
+	// Get overrides for 30 days in the past and 180 days in the future
+	// This allows users to see and manage recent past overrides and plan ahead
 	today := time.Now().Truncate(24 * time.Hour)
-	endDate := today.AddDate(0, 0, 90)
+	startDate := today.AddDate(0, 0, -30)
+	endDate := today.AddDate(0, 0, 180)
 
-	overrides, err := s.capacityRepo.GetOverridesRange(ctx, entityID, today, endDate)
+	overrides, err := s.capacityRepo.GetOverridesRange(ctx, entityID, startDate, endDate)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get overrides: %w", err)
 	}
