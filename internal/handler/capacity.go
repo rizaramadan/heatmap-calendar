@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gti/heatmap-internal/internal/middleware"
@@ -72,11 +74,70 @@ func (h *CapacityHandler) UpdateMyCapacity(c echo.Context) error {
 	}
 
 	var req models.UpdateCapacityRequest
-	if err := c.Bind(&req); err != nil {
-		if c.Request().Header.Get("HX-Request") == "true" {
-			return c.HTML(http.StatusBadRequest, `<div class="text-red-500">Invalid request</div>`)
+
+	// Parse form data manually since Echo's Bind() doesn't handle nested arrays properly
+	formParams, err := c.FormParams()
+	if err == nil && len(formParams) > 0 {
+		// Parse default_capacity
+		if defaultCapStr := c.FormValue("default_capacity"); defaultCapStr != "" {
+			var defaultCap float64
+			if _, err := fmt.Sscanf(defaultCapStr, "%f", &defaultCap); err == nil {
+				req.DefaultCapacity = &defaultCap
+			}
 		}
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
+
+		// Parse date_overrides array
+		overridesMap := make(map[string]map[string]string)
+		for key, values := range formParams {
+			if len(values) == 0 {
+				continue
+			}
+			// Match pattern: date_overrides[N][field]
+			// Use strings package for simpler parsing
+			if strings.HasPrefix(key, "date_overrides[") && strings.Contains(key, "][") {
+				// Extract index and field manually
+				start := len("date_overrides[")
+				firstClose := strings.Index(key, "]")
+				if firstClose > start {
+					index := key[start:firstClose]
+					secondOpen := firstClose + 2 // skip "]["
+					secondClose := strings.LastIndex(key, "]")
+					if secondClose > secondOpen {
+						field := key[secondOpen:secondClose]
+						if overridesMap[index] == nil {
+							overridesMap[index] = make(map[string]string)
+						}
+						overridesMap[index][field] = values[0]
+					}
+				}
+			}
+		}
+
+		// Convert map to slice
+		for _, override := range overridesMap {
+			if date, ok := override["date"]; ok {
+				if capacityStr, ok := override["capacity"]; ok {
+					var capacity float64
+					if _, err := fmt.Sscanf(capacityStr, "%f", &capacity); err == nil {
+						req.DateOverrides = append(req.DateOverrides, struct {
+							Date     string  `json:"date" validate:"required"`
+							Capacity float64 `json:"capacity" validate:"required,min=0"`
+						}{
+							Date:     date,
+							Capacity: capacity,
+						})
+					}
+				}
+			}
+		}
+	} else {
+		// Fall back to JSON binding
+		if err := c.Bind(&req); err != nil {
+			if c.Request().Header.Get("HX-Request") == "true" {
+				return c.HTML(http.StatusBadRequest, `<div class="text-red-500">Invalid request</div>`)
+			}
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
+		}
 	}
 
 	if err := h.capacityService.UpdateCapacity(c.Request().Context(), userEmail, &req); err != nil {
