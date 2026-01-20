@@ -93,6 +93,36 @@ func (h *CapacityHandler) UpdateMyCapacity(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"success": "capacity updated"})
 }
 
+// DeleteMyCapacityOverride handles deletion of a specific capacity override
+// @Summary Delete capacity override
+// @Description Delete a specific date override for the currently logged-in user
+// @Tags Capacity
+// @Accept json
+// @Produce json
+// @Param date path string true "Date in YYYY-MM-DD format"
+// @Success 200 {object} map[string]string "Success message"
+// @Failure 400 {object} map[string]string "Invalid date format"
+// @Failure 401 {object} map[string]string "Not authenticated"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/my-capacity/override/{date} [delete]
+func (h *CapacityHandler) DeleteMyCapacityOverride(c echo.Context) error {
+	userEmail := middleware.GetUserEmail(c)
+	if userEmail == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "not authenticated"})
+	}
+
+	dateStr := c.Param("date")
+	if dateStr == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "date parameter required"})
+	}
+
+	if err := h.capacityService.DeleteDateOverride(c.Request().Context(), userEmail, dateStr); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"success": "override deleted"})
+}
+
 // GetCapacityForm returns the capacity form partial (HTMX)
 func (h *CapacityHandler) GetCapacityForm(c echo.Context) error {
 	userEmail := middleware.GetUserEmail(c)
