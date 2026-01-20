@@ -40,8 +40,12 @@ func (h *CapacityHandler) MyCapacityPage(c echo.Context) error {
 
 	entity, overrides, err := h.capacityService.GetCapacityInfo(c.Request().Context(), userEmail)
 	if err != nil {
-		return c.String(http.StatusInternalServerError, "Failed to load capacity data")
+		log.Printf("MyCapacityPage: Failed to load capacity data for %s: %v", userEmail, err)
+		return c.String(http.StatusInternalServerError, "Failed to load capacity data: "+err.Error())
 	}
+
+	log.Printf("MyCapacityPage: Successfully loaded data for %s (entity: %s, overrides: %d)",
+		userEmail, entity.ID, len(overrides))
 
 	data := map[string]interface{}{
 		"Entity":          entity,
@@ -50,7 +54,7 @@ func (h *CapacityHandler) MyCapacityPage(c echo.Context) error {
 		"UserEmail":       userEmail,
 	}
 
-	return h.templates.ExecuteTemplate(c.Response().Writer, "capacity_form.html", data)
+	return h.templates.ExecuteTemplate(c.Response().Writer, "capacity_form", data)
 }
 
 // UpdateMyCapacity handles the capacity update request for the logged-in user

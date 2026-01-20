@@ -65,9 +65,25 @@ func (s *CapacityService) DeleteDateOverride(ctx context.Context, entityID strin
 }
 
 // GetCapacityInfo returns capacity information for an entity
+// If the entity doesn't exist, it creates one automatically
 func (s *CapacityService) GetCapacityInfo(ctx context.Context, entityID string) (*models.Entity, []models.CapacityOverride, error) {
 	entity, err := s.entityRepo.GetByID(ctx, entityID)
-	if err != nil {
+	if err == repository.ErrEntityNotFound {
+		// Auto-create entity for this user with default capacity
+		entity = &models.Entity{
+			ID:              entityID,
+			Title:           entityID, // Use email as title initially
+			Type:            "person",
+			DefaultCapacity: 5.0,
+		}
+
+		if err := s.entityRepo.Create(ctx, entity); err != nil {
+			return nil, nil, fmt.Errorf("failed to create entity: %w", err)
+		}
+
+		// Return newly created entity with no overrides
+		return entity, []models.CapacityOverride{}, nil
+	} else if err != nil {
 		return nil, nil, fmt.Errorf("failed to get entity: %w", err)
 	}
 

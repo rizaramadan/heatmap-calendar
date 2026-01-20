@@ -56,6 +56,9 @@
                     <p class="text-gray-600">Managing capacity for:</p>
                     <p class="text-lg font-semibold">{{.Entity.Title}}</p>
                     <p class="text-sm text-gray-500">{{.Entity.ID}}</p>
+                    {{if eq .Entity.Title .Entity.ID}}
+                    <p class="text-xs text-blue-600 mt-1">Tip: You can ask an admin to update your display name</p>
+                    {{end}}
                 </div>
 
                 <form hx-post="/api/my-capacity" hx-target="#form-result" hx-swap="innerHTML" class="space-y-6">
