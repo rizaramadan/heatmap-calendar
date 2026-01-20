@@ -76,7 +76,7 @@ func main() {
 	webhookService := service.NewWebhookService(cfg.WebhookDestinationURL, loadRepo, capacityRepo)
 	heatmapService := service.NewHeatmapService(entityRepo, capacityRepo, loadRepo, groupRepo)
 	loadService := service.NewLoadService(loadRepo, entityRepo, webhookService)
-	authService := service.NewAuthService(db.Pool, cfg.MailgunDomain, cfg.MailgunAPIKey)
+	authService := service.NewAuthService(db.Pool, cfg.LarkBearerToken)
 	capacityService := service.NewCapacityService(entityRepo, capacityRepo)
 
 	// Load templates
