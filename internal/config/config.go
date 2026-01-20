@@ -10,7 +10,8 @@ type Config struct {
 	DatabaseURL           string
 	APIKey                string
 	SessionSecret         string
-	LarkBearerToken       string
+	LarkAppID             string
+	LarkAppSecret         string
 	WebhookDestinationURL string
 	Port                  string
 }
@@ -23,7 +24,8 @@ func Load() (*Config, error) {
 		DatabaseURL:           getEnv("DATABASE_URL", "postgres://localhost:5432/load_calendar?sslmode=disable"),
 		APIKey:                getEnv("API_KEY", ""),
 		SessionSecret:         getEnv("SESSION_SECRET", "default-secret-change-in-production"),
-		LarkBearerToken:       getEnv("LARK_BEARER_TOKEN", ""),
+		LarkAppID:             getEnv("LARK_APP_ID", ""),
+		LarkAppSecret:         getEnv("LARK_APP_SECRET", ""),
 		WebhookDestinationURL: getEnv("WEBHOOK_DESTINATION_URL", ""),
 		Port:                  getEnv("PORT", "8080"),
 	}

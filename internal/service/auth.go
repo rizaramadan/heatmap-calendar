@@ -24,18 +24,20 @@ var (
 )
 
 type AuthService struct {
-	pool            *pgxpool.Pool
-	larkBearerToken string
-	otpExpiry       time.Duration
-	sessionExpiry   time.Duration
+	pool          *pgxpool.Pool
+	larkAppID     string
+	larkAppSecret string
+	otpExpiry     time.Duration
+	sessionExpiry time.Duration
 }
 
-func NewAuthService(pool *pgxpool.Pool, larkBearerToken string) *AuthService {
+func NewAuthService(pool *pgxpool.Pool, larkAppID, larkAppSecret string) *AuthService {
 	return &AuthService{
-		pool:            pool,
-		larkBearerToken: larkBearerToken,
-		otpExpiry:       10 * time.Minute,
-		sessionExpiry:   24 * time.Hour * 7, // 7 days
+		pool:          pool,
+		larkAppID:     larkAppID,
+		larkAppSecret: larkAppSecret,
+		otpExpiry:     10 * time.Minute,
+		sessionExpiry: 24 * time.Hour * 7, // 7 days
 	}
 }
 
@@ -60,7 +62,7 @@ func (s *AuthService) SendOTP(ctx context.Context, email string) error {
 	}
 
 	// Send OTP via Lark API
-	if s.larkBearerToken != "" {
+	if s.larkAppID != "" && s.larkAppSecret != "" {
 		if err := s.sendOTPViaLark(ctx, email, otp); err != nil {
 			log.Printf("Failed to send OTP via Lark: %v", err)
 			// Continue anyway - log the OTP for development
@@ -172,8 +174,62 @@ func (s *AuthService) CleanExpiredSessions(ctx context.Context) error {
 	return nil
 }
 
+// getLarkTenantAccessToken fetches a fresh tenant access token from Lark API
+func (s *AuthService) getLarkTenantAccessToken(ctx context.Context) (string, error) {
+	requestBody := map[string]string{
+		"app_id":     s.larkAppID,
+		"app_secret": s.larkAppSecret,
+	}
+
+	jsonBody, err := json.Marshal(requestBody)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal token request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST",
+		"https://open.larksuite.com/open-apis/auth/v3/tenant_access_token/internal",
+		bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return "", fmt.Errorf("failed to create token request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to send token request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var tokenResp struct {
+		Code              int    `json:"code"`
+		Msg               string `json:"msg"`
+		TenantAccessToken string `json:"tenant_access_token"`
+		Expire            int    `json:"expire"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
+		return "", fmt.Errorf("failed to decode token response: %w", err)
+	}
+
+	if tokenResp.Code != 0 {
+		return "", fmt.Errorf("lark token API error: code=%d, msg=%s", tokenResp.Code, tokenResp.Msg)
+	}
+
+	return tokenResp.TenantAccessToken, nil
+}
+
 // sendOTPViaLark sends the OTP via Lark API
 func (s *AuthService) sendOTPViaLark(ctx context.Context, email, otp string) error {
+	// Get fresh tenant access token
+	token, err := s.getLarkTenantAccessToken(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get lark access token: %w", err)
+	}
+
 	// Prepare the request body
 	requestBody := map[string]interface{}{
 		"receive_id": email,
@@ -197,7 +253,7 @@ func (s *AuthService) sendOTPViaLark(ctx context.Context, email, otp string) err
 
 	// Set headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.larkBearerToken))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
 	// Send request with timeout
 	client := &http.Client{
