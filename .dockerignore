@@ -1,0 +1,40 @@
+# Git files
+.git
+.gitignore
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Documentation
+*.md
+.claude/
+# Note: docs/ is NOT excluded - it's generated during build
+
+# Test files
+*_test.go
+testing.md
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Makefile (not needed in container)
+Makefile
+
+# Cloud Build
+cloudbuild.yaml
+
+# Docker
+Dockerfile
+.dockerignore
