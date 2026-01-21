@@ -1,0 +1,59 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/load-calendar:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/load-calendar:latest'
+      - '.'
+
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/load-calendar:$COMMIT_SHA'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/load-calendar:latest'
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'load-calendar'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/load-calendar:$COMMIT_SHA'
+      - '--region'
+      - 'asia-southeast1'
+      - '--platform'
+      - 'managed'
+      - '--ingress'
+      - 'internal-and-cloud-load-balancing'
+      - '--allow-unauthenticated'
+      # Use Secret Manager for sensitive data (lc- prefix)
+      - '--set-secrets'
+      - 'DATABASE_URL=lc-database-url:latest,API_KEY=lc-api-key:latest,SESSION_SECRET=lc-session-secret:latest,LARK_APP_ID=lc-lark-app-id:latest,LARK_APP_SECRET=lc-lark-app-secret:latest,WEBHOOK_DESTINATION_URL=lc-webhook-url:latest'
+      # Cloud SQL connection via Unix socket (Auth Proxy)
+      - '--add-cloudsql-instances'
+      - 'devsecops-480902:asia-southeast1:postgre-n8n-devsecops'
+      # Scaling configuration
+      - '--min-instances'
+      - '0'
+      - '--max-instances'
+      - '10'
+      # Resource limits
+      - '--memory'
+      - '512Mi'
+      - '--cpu'
+      - '1'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: '1200s'
