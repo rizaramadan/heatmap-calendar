@@ -37,9 +37,9 @@ func NewWebhookService(
 
 // CheckAndAlert checks if a person is overloaded on a future date and sends webhook alert
 // This runs in a goroutine to avoid blocking the main request
-func (s *WebhookService) CheckAndAlert(personEmail string, date time.Time) {
+func (s *WebhookService) CheckAndAlert(ctx context.Context, personEmail string, date time.Time) {
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 
 		// Only alert for future dates
@@ -125,6 +125,6 @@ func (s *WebhookService) CheckAllAffectedPersons(ctx context.Context, loadID int
 	}
 
 	for _, email := range persons {
-		s.CheckAndAlert(email, date)
+		s.CheckAndAlert(ctx, email, date)
 	}
 }

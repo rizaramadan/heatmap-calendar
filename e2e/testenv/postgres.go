@@ -136,9 +136,11 @@ func StartPostgres(ctx context.Context, cfg PostgresConfig) (*PostgresContainer,
 		Port:             mappedPort.Port(),
 	}
 
+	//nolint:contextcheck // cleanup function creates its own context
 	cleanup := func() {
 		pool.Close()
-		_ = container.Terminate(context.Background())
+		ctx := context.Background()
+		_ = container.Terminate(ctx)
 	}
 
 	return pg, cleanup, nil

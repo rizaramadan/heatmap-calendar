@@ -21,6 +21,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"html/template"
 	"log"
 	"net/http"
@@ -58,11 +59,14 @@ func main() {
 	// Run migrations
 	ctx := context.Background()
 	if err := db.RunMigrations(ctx); err != nil {
+		db.Close()
+		//nolint:gocritic // We close DB before Fatalf, so this is safe
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
 	// Seed data
 	if err := db.SeedData(ctx); err != nil {
+		db.Close()
 		log.Fatalf("Failed to seed data: %v", err)
 	}
 
@@ -160,7 +164,7 @@ func main() {
 	go func() {
 		addr := ":" + cfg.Port
 		log.Printf("Starting server on %s", addr)
-		if err := e.Start(addr); err != nil && err != http.ErrServerClosed {
+		if err := e.Start(addr); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("Server error: %v", err)
 		}
 	}()

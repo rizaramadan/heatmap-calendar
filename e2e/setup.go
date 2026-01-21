@@ -6,6 +6,7 @@ package e2e
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"html/template"
 	"net"
@@ -342,7 +343,7 @@ func (env *TestEnv) startServer(db *database.DB, apiKey string, port int) error 
 	// Start server in goroutine
 	go func() {
 		addr := fmt.Sprintf(":%d", port)
-		if err := e.Start(addr); err != nil && err != http.ErrServerClosed {
+		if err := e.Start(addr); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			fmt.Printf("Test server error: %v\n", err)
 		}
 	}()

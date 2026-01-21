@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
@@ -119,7 +120,7 @@ func (h *APIHandler) GetEntity(c echo.Context) error {
 
 	entity, err := h.entityRepo.GetByID(c.Request().Context(), id)
 	if err != nil {
-		if err == repository.ErrEntityNotFound {
+		if errors.Is(err, repository.ErrEntityNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
 				"error": "entity not found",
 			})
@@ -196,7 +197,7 @@ func (h *APIHandler) DeleteEntity(c echo.Context) error {
 	id := c.Param("id")
 
 	if err := h.entityRepo.Delete(c.Request().Context(), id); err != nil {
-		if err == repository.ErrEntityNotFound {
+		if errors.Is(err, repository.ErrEntityNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
 				"error": "entity not found",
 			})

@@ -67,6 +67,7 @@ func (h *CapacityHandler) MyCapacityPage(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Not authenticated"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /api/my-capacity [post]
+//nolint:gocognit,nestif // Complex form parsing logic is acceptable here
 func (h *CapacityHandler) UpdateMyCapacity(c echo.Context) error {
 	userEmail := middleware.GetUserEmail(c)
 	if userEmail == "" {
@@ -133,7 +134,7 @@ func (h *CapacityHandler) UpdateMyCapacity(c echo.Context) error {
 	} else {
 		// Fall back to JSON binding
 		if err := c.Bind(&req); err != nil {
-			if c.Request().Header.Get("HX-Request") == "true" {
+			if c.Request().Header.Get(htmxRequestHeader) == htmxRequestValue {
 				return c.HTML(http.StatusBadRequest, `<div class="text-red-500">Invalid request</div>`)
 			}
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
@@ -141,7 +142,7 @@ func (h *CapacityHandler) UpdateMyCapacity(c echo.Context) error {
 	}
 
 	if err := h.capacityService.UpdateCapacity(c.Request().Context(), userEmail, &req); err != nil {
-		if c.Request().Header.Get("HX-Request") == "true" {
+		if c.Request().Header.Get(htmxRequestHeader) == htmxRequestValue {
 			return c.HTML(http.StatusInternalServerError, `<div class="text-red-500">Failed to update capacity</div>`)
 		}
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})

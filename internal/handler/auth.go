@@ -12,6 +12,13 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+const (
+	// htmxRequestHeader is the header HTMX sends to identify AJAX requests
+	htmxRequestHeader = "HX-Request"
+	// htmxRequestValue is the value HTMX sets for the HX-Request header
+	htmxRequestValue = "true"
+)
+
 type AuthHandler struct {
 	authService *service.AuthService
 	entityRepo  *repository.EntityRepository
@@ -72,7 +79,7 @@ func (h *AuthHandler) RequestOTP(c echo.Context) error {
 
 	if err := h.validate.Struct(req); err != nil {
 		// For HTMX, return HTML partial
-		if c.Request().Header.Get("HX-Request") == "true" {
+		if c.Request().Header.Get(htmxRequestHeader) == htmxRequestValue {
 			return c.HTML(http.StatusBadRequest, `<div class="text-red-500">Please enter a valid email address</div>`)
 		}
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
@@ -81,7 +88,7 @@ func (h *AuthHandler) RequestOTP(c echo.Context) error {
 	// Verify user exists (must be a registered person)
 	_, err := h.entityRepo.GetByID(c.Request().Context(), req.Email)
 	if err != nil {
-		if c.Request().Header.Get("HX-Request") == "true" {
+		if c.Request().Header.Get(htmxRequestHeader) == htmxRequestValue {
 			return c.HTML(http.StatusBadRequest, `<div class="text-red-500">Email not found in system</div>`)
 		}
 		return c.JSON(http.StatusNotFound, map[string]string{"error": "email not found"})
@@ -89,14 +96,14 @@ func (h *AuthHandler) RequestOTP(c echo.Context) error {
 
 	// Send OTP
 	if err := h.authService.SendOTP(c.Request().Context(), req.Email); err != nil {
-		if c.Request().Header.Get("HX-Request") == "true" {
+		if c.Request().Header.Get(htmxRequestHeader) == htmxRequestValue {
 			return c.HTML(http.StatusInternalServerError, `<div class="text-red-500">Failed to send code. Please try again.</div>`)
 		}
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to send OTP"})
 	}
 
 	// For HTMX, return the OTP verification form
-	if c.Request().Header.Get("HX-Request") == "true" {
+	if c.Request().Header.Get(htmxRequestHeader) == htmxRequestValue {
 		data := map[string]interface{}{
 			"Email": req.Email,
 		}
@@ -131,7 +138,7 @@ func (h *AuthHandler) VerifyOTP(c echo.Context) error {
 	}
 
 	if err := h.validate.Struct(req); err != nil {
-		if c.Request().Header.Get("HX-Request") == "true" {
+		if c.Request().Header.Get(htmxRequestHeader) == htmxRequestValue {
 			return c.HTML(http.StatusBadRequest, `<div class="text-red-500">Please enter a valid 6-digit code</div>`)
 		}
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
@@ -140,7 +147,7 @@ func (h *AuthHandler) VerifyOTP(c echo.Context) error {
 	// Verify OTP
 	valid, err := h.authService.VerifyOTP(c.Request().Context(), req.Email, req.OTP)
 	if err != nil || !valid {
-		if c.Request().Header.Get("HX-Request") == "true" {
+		if c.Request().Header.Get(htmxRequestHeader) == htmxRequestValue {
 			return c.HTML(http.StatusBadRequest, `<div class="text-red-500">Invalid or expired code</div>`)
 		}
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid or expired OTP"})
@@ -149,7 +156,7 @@ func (h *AuthHandler) VerifyOTP(c echo.Context) error {
 	// Create session
 	token, err := h.authService.CreateSession(c.Request().Context(), req.Email)
 	if err != nil {
-		if c.Request().Header.Get("HX-Request") == "true" {
+		if c.Request().Header.Get(htmxRequestHeader) == htmxRequestValue {
 			return c.HTML(http.StatusInternalServerError, `<div class="text-red-500">Failed to create session</div>`)
 		}
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to create session"})
@@ -159,7 +166,7 @@ func (h *AuthHandler) VerifyOTP(c echo.Context) error {
 	middleware.SetSessionCookie(c, token)
 
 	// For HTMX, redirect via header
-	if c.Request().Header.Get("HX-Request") == "true" {
+	if c.Request().Header.Get(htmxRequestHeader) == htmxRequestValue {
 		c.Response().Header().Set("HX-Redirect", "/")
 		return c.String(http.StatusOK, "")
 	}
@@ -183,7 +190,7 @@ func (h *AuthHandler) Logout(c echo.Context) error {
 	middleware.ClearSessionCookie(c)
 
 	// For HTMX, redirect
-	if c.Request().Header.Get("HX-Request") == "true" {
+	if c.Request().Header.Get(htmxRequestHeader) == htmxRequestValue {
 		c.Response().Header().Set("HX-Redirect", "/")
 		return c.String(http.StatusOK, "")
 	}

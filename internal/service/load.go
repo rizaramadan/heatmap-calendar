@@ -87,7 +87,7 @@ func (s *LoadService) UpsertLoad(ctx context.Context, req *models.UpsertLoadRequ
 
 	// Trigger webhook alerts for affected persons (in background)
 	for _, a := range req.Assignees {
-		s.webhookService.CheckAndAlert(a.Email, date)
+		s.webhookService.CheckAndAlert(ctx, a.Email, date)
 	}
 
 	return loadID, nil
@@ -153,7 +153,7 @@ func (s *LoadService) AddAssignees(ctx context.Context, loadID int, req *models.
 
 	// Trigger webhook alerts for affected persons (in background)
 	for _, a := range req.Assignees {
-		s.webhookService.CheckAndAlert(a.Email, load.Load.Date)
+		s.webhookService.CheckAndAlert(ctx, a.Email, load.Load.Date)
 	}
 
 	return nil
