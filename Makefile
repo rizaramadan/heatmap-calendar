@@ -150,7 +150,7 @@ fmt:
 # Run linter
 lint:
 	@if command -v golangci-lint > /dev/null; then \
-		golangci-lint run; \
+		golangci-lint run ./internal/... ./cmd/...; \
 	else \
 		echo "golangci-lint not installed"; \
 	fi
