@@ -6,7 +6,11 @@
       "Bash(go build:*)",
       "Bash(./bin/server)",
       "Bash(tree:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(xargs:*)",
+      "Bash(go mod tidy:*)"
     ]
   }
 }
