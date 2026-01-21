@@ -112,8 +112,8 @@ func StartService(ctx context.Context, cfg ServiceConfig) (*Service, func(), err
 		fmt.Sprintf("API_KEY=%s", cfg.APIKey),
 		fmt.Sprintf("SESSION_SECRET=%s", cfg.SessionSecret),
 		fmt.Sprintf("PORT=%d", port),
-		"LARK_APP_ID=",       // Disable Lark in tests
-		"LARK_APP_SECRET=",   // Disable Lark in tests
+		"LARK_APP_ID=",     // Disable Lark in tests
+		"LARK_APP_SECRET=", // Disable Lark in tests
 	)
 
 	// Start the process

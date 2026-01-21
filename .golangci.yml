@@ -1,0 +1,180 @@
+# golangci-lint configuration v2
+# Strict configuration for production-quality Go code
+
+version: "2"
+
+run:
+  # Timeout for analysis
+  timeout: 5m
+  # Include test files
+  tests: true
+
+linters:
+  # Enable additional linters for stricter checks
+  enable:
+    # Bug detection
+    - bodyclose          # HTTP response body not closed
+    - contextcheck       # Non-inherited context usage
+    - durationcheck      # Duration multiplication issues
+    - errchkjson         # JSON encoding error checks
+    - nilerr             # Returns nil even when error is not nil
+    - nilnesserr         # Returns different nil value error
+    - noctx              # Missing context.Context usage
+    - rowserrcheck       # sql.Rows.Err not checked
+    - sqlclosecheck      # sql.Rows not closed
+    
+    # Code quality
+    - gocritic           # Bugs, performance, style issues
+    - gosec              # Security problems
+    - goconst            # Repeated strings -> constants
+    - gocognit           # Cognitive complexity
+    - gocyclo            # Cyclomatic complexity
+    - funlen             # Function length
+    - nestif             # Deeply nested if statements
+    
+    # Style & consistency
+    - misspell           # Spelling errors
+    - unconvert          # Unnecessary type conversions
+    - unparam            # Unused function parameters
+    - wastedassign       # Wasted assignments
+    
+    # Error handling
+    - errorlint          # Error wrapping issues (Go 1.13+)
+    - wrapcheck          # Errors not wrapped
+    
+    # Performance
+    - prealloc           # Slice preallocation suggestions
+    - copyloopvar        # Loop variable copy issues
+    
+    # Maintainability
+    - maintidx           # Maintainability index
+    - nakedret           # Naked returns in long functions
+    - revive             # Replacement for golint
+
+linters-settings:
+  gocyclo:
+    # Maximum cyclomatic complexity
+    min-complexity: 15
+
+  gocognit:
+    # Maximum cognitive complexity
+    min-complexity: 20
+
+  funlen:
+    # Maximum function length
+    lines: 100
+    statements: 60
+
+  nestif:
+    # Maximum nesting level
+    min-complexity: 5
+
+  goconst:
+    # Minimum string length for goconst
+    min-len: 3
+    # Minimum occurrences
+    min-occurrences: 3
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - whyNoLint
+      - hugeParam  # Can be noisy for structs
+
+  gosec:
+    excludes:
+      - G104  # We handle some errors intentionally with _ =
+      - G304  # File path from variable (common in web apps)
+
+  errcheck:
+    # Check type assertions
+    check-type-assertions: true
+    # Check blank identifier assignments
+    check-blank: false
+
+  revive:
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: exported
+      - name: if-return
+      - name: increment-decrement
+      - name: var-naming
+      - name: var-declaration
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unused-parameter
+      - name: unreachable-code
+
+  nakedret:
+    # No naked returns in functions longer than this
+    max-func-lines: 30
+
+  maintidx:
+    # Minimum maintainability index (0-100, higher is better)
+    under: 20
+
+  wrapcheck:
+    ignore-sigs:
+      - .Errorf(
+      - errors.New(
+      - errors.Unwrap(
+      - errors.Join(
+      - .Wrap(
+      - .Wrapf(
+      - .WithMessage(
+      - .WithMessagef(
+      - .WithStack(
+
+  misspell:
+    locale: US
+
+issues:
+  # Maximum issues per linter (0 = unlimited)
+  max-issues-per-linter: 50
+  # Maximum same issues (0 = unlimited)
+  max-same-issues: 10
+  
+  exclude-rules:
+    # Exclude some linters from test files
+    - path: _test\.go
+      linters:
+        - funlen
+        - gocyclo
+        - gocognit
+        - errcheck
+        - dupl
+        - gosec
+        - wrapcheck
+        - maintidx
+    
+    # Exclude e2e test helpers
+    - path: e2e/
+      linters:
+        - wrapcheck
+        - errcheck
+        - gosec
+        - funlen
+        - gocognit
+
+    # Generated files (swagger docs)
+    - path: docs/
+      linters:
+        - all
