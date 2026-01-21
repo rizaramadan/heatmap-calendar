@@ -21,9 +21,11 @@ package testenv
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/gti/heatmap-internal/e2e/helpers"
+	"github.com/gti/heatmap-internal/internal/database"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -70,23 +72,28 @@ type EnvConfig struct {
 
 	// SkipService skips starting the service (for DB-only tests).
 	SkipService bool
+
+	// ExternalDatabaseURL is an optional external database URL to use instead of testcontainers.
+	// If set, testcontainers will be skipped. Useful for CI environments without Docker.
+	ExternalDatabaseURL string
 }
 
 // DefaultConfig returns the default test environment configuration.
 func DefaultConfig() EnvConfig {
 	return EnvConfig{
-		Postgres:    DefaultPostgresConfig(),
-		Service:     DefaultServiceConfig(),
-		SkipService: false,
+		Postgres:            DefaultPostgresConfig(),
+		Service:             DefaultServiceConfig(),
+		SkipService:         false,
+		ExternalDatabaseURL: os.Getenv("TEST_DATABASE_URL"),
 	}
 }
 
 // Setup initializes the complete E2E test environment.
 //
 // This function:
-//  1. Starts an ephemeral PostgreSQL container
+//  1. Starts an ephemeral PostgreSQL container (or uses external database if provided)
 //  2. Runs database migrations
-//  3. Starts the application service connected to the container
+//  3. Starts the application service connected to the database
 //  4. Initializes test helpers (DB, API)
 //
 // Always call Teardown() when done:
@@ -102,23 +109,52 @@ func Setup(ctx context.Context, cfg EnvConfig) (*TestEnv, error) {
 		cleanupFuncs: make([]func(), 0),
 	}
 
-	// Start PostgreSQL container
-	pg, pgCleanup, err := StartPostgres(ctx, cfg.Postgres)
-	if err != nil {
-		return nil, fmt.Errorf("failed to start postgres: %w", err)
+	var pool *pgxpool.Pool
+	var dbURL string
+
+	// Use external database if provided, otherwise start testcontainer
+	if cfg.ExternalDatabaseURL != "" {
+		// Connect to external database
+		db, err := database.New(cfg.ExternalDatabaseURL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to external database: %w", err)
+		}
+
+		// Run migrations
+		if err := db.RunMigrations(ctx); err != nil {
+			db.Close()
+			return nil, fmt.Errorf("failed to run migrations on external database: %w", err)
+		}
+
+		pool = db.Pool
+		dbURL = cfg.ExternalDatabaseURL
+		env.addCleanup(func() {
+			if pool != nil {
+				pool.Close()
+			}
+		})
+	} else {
+		// Start PostgreSQL container
+		pg, pgCleanup, err := StartPostgres(ctx, cfg.Postgres)
+		if err != nil {
+			return nil, fmt.Errorf("failed to start postgres: %w", err)
+		}
+		env.addCleanup(pgCleanup)
+		env.Postgres = pg
+		pool = pg.Pool
+		dbURL = pg.ConnectionString
 	}
-	env.addCleanup(pgCleanup)
-	env.Postgres = pg
-	env.Pool = pg.Pool
+
+	env.Pool = pool
 
 	// Initialize DB helper
-	env.DB = helpers.NewDBHelper(pg.Pool)
+	env.DB = helpers.NewDBHelper(pool)
 
 	// Start service unless skipped
 	if !cfg.SkipService {
-		// Configure service with container's database URL
+		// Configure service with database URL
 		svcCfg := cfg.Service
-		svcCfg.DatabaseURL = pg.ConnectionString
+		svcCfg.DatabaseURL = dbURL
 
 		svc, svcCleanup, err := StartService(ctx, svcCfg)
 		if err != nil {
@@ -166,7 +202,29 @@ func (env *TestEnv) Teardown() {
 //	    // ... test with clean state ...
 //	}
 func (env *TestEnv) CleanupTestData(ctx context.Context) error {
-	return env.Postgres.TruncateAllTables(ctx)
+	if env.Postgres != nil {
+		return env.Postgres.TruncateAllTables(ctx)
+	}
+
+	// Fallback for external database: manually truncate tables
+	tables := []string{
+		"load_calendar_data.sessions",
+		"load_calendar_data.otp_records",
+		"load_calendar_data.load_assignments",
+		"load_calendar_data.loads",
+		"load_calendar_data.capacity_overrides",
+		"load_calendar_data.group_members",
+		"load_calendar_data.entities",
+	}
+
+	for _, table := range tables {
+		_, err := env.Pool.Exec(ctx, fmt.Sprintf("TRUNCATE TABLE %s CASCADE", table))
+		if err != nil {
+			return fmt.Errorf("failed to truncate %s: %w", table, err)
+		}
+	}
+
+	return nil
 }
 
 // Browser returns the browser helper, initializing it lazily.

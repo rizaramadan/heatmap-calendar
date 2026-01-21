@@ -25,15 +25,24 @@ var env *testenv.TestEnv
 // TestMain sets up the E2E test environment before running tests.
 //
 // It spins up:
-//   - Ephemeral PostgreSQL container via testcontainers-go
-//   - Application service connected to the container
+//   - Ephemeral PostgreSQL container via testcontainers-go (or uses external database)
+//   - Application service connected to the database
 //
-// Tests are skipped if Docker is not available.
+// Tests are skipped if Docker is not available and no external database is provided.
 func TestMain(m *testing.M) {
-	// Check if Docker is available
-	if !isDockerAvailable() {
-		fmt.Println("SKIP: Docker is not available, skipping E2E tests")
+	// Check if external database is provided
+	externalDB := os.Getenv("TEST_DATABASE_URL")
+
+	// Check if Docker is available (skip if external database is provided)
+	if externalDB == "" && !isDockerAvailable() {
+		fmt.Println("SKIP: Docker is not available and no TEST_DATABASE_URL provided, skipping E2E tests")
 		os.Exit(0)
+	}
+
+	if externalDB != "" {
+		fmt.Printf("Using external database: %s\n", externalDB)
+	} else {
+		fmt.Println("Using testcontainers with Docker")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)

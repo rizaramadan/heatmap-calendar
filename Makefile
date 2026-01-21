@@ -46,23 +46,25 @@ test:
 # E2E Tests
 # ============================================================================
 
-# Prepare E2E test dependencies (check Docker is installed and running)
+# Prepare E2E test dependencies (check Docker is installed and running, or external database is provided)
 prepare-e2e:
 	@echo "Checking E2E test dependencies..."
-	@if ! command -v docker > /dev/null 2>&1; then \
-		echo "❌ Docker is not installed."; \
-		echo "   Please install Docker Desktop from https://www.docker.com/products/docker-desktop/"; \
+	@if [ -n "$$TEST_DATABASE_URL" ]; then \
+		echo "✅ Using external database: $$TEST_DATABASE_URL"; \
+		echo "✅ All E2E dependencies are ready!"; \
+	elif ! command -v docker > /dev/null 2>&1; then \
+		echo "❌ Docker is not installed and no TEST_DATABASE_URL provided."; \
+		echo "   Option 1: Install Docker Desktop from https://www.docker.com/products/docker-desktop/"; \
+		echo "   Option 2: Set TEST_DATABASE_URL environment variable to use external database"; \
+		exit 1; \
+	elif ! docker info > /dev/null 2>&1; then \
+		echo "❌ Docker is not running. Please start Docker Desktop or set TEST_DATABASE_URL."; \
 		exit 1; \
 	else \
 		echo "✅ Docker is installed"; \
-	fi
-	@if ! docker info > /dev/null 2>&1; then \
-		echo "❌ Docker is not running. Please start Docker Desktop."; \
-		exit 1; \
-	else \
 		echo "✅ Docker is running"; \
+		echo "✅ All E2E dependencies are ready!"; \
 	fi
-	@echo "✅ All E2E dependencies are ready!"
 
 # Run all E2E tests (requires Docker)
 test-e2e: prepare-e2e
