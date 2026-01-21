@@ -1,0 +1,219 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop, 'claude/**' ]
+  pull_request:
+    branches: [ main, develop ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.1'
+          cache: true
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+          args: --timeout=5m
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.1'
+          cache: true
+
+      - name: Run unit tests
+        run: ./scripts/test-unit.sh
+        env:
+          VERBOSE: 1
+
+      - name: Upload unit test coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-unit
+          path: coverage/unit.out
+          retention-days: 7
+
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: load_calendar_test
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.1'
+          cache: true
+
+      - name: Wait for PostgreSQL
+        run: |
+          until pg_isready -h localhost -p 5432 -U test_user; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+
+      - name: Run E2E tests
+        run: ./scripts/test-e2e.sh
+        env:
+          VERBOSE: 1
+          TEST_DATABASE_URL: postgres://test_user:test_pass@localhost:5432/load_calendar_test?sslmode=disable
+          TEST_API_KEY: test-api-key-ci
+
+      - name: Upload E2E test coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-e2e
+          path: |
+            coverage/e2e.out
+            coverage/e2e-service/
+          retention-days: 7
+
+  coverage:
+    name: Merge Coverage
+    runs-on: ubuntu-latest
+    needs: [unit-tests, e2e-tests]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.1'
+          cache: true
+
+      - name: Download unit test coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-unit
+          path: coverage/
+
+      - name: Download E2E test coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-e2e
+          path: coverage/
+
+      - name: Install gocovmerge
+        run: go install github.com/wadey/gocovmerge@latest
+
+      - name: Merge coverage reports
+        run: ./scripts/merge-coverage.sh
+
+      - name: Upload combined coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-combined
+          path: |
+            coverage/combined.out
+            coverage/coverage.html
+          retention-days: 30
+
+      - name: Display coverage summary
+        run: |
+          echo "## Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          go tool cover -func=coverage/combined.out | tail -20 >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const { execSync } = require('child_process');
+
+            // Get coverage percentage
+            const output = execSync('go tool cover -func=coverage/combined.out').toString();
+            const lines = output.split('\n');
+            const totalLine = lines[lines.length - 2];
+            const coverage = totalLine.match(/(\d+\.\d+)%/)[1];
+
+            // Get lowest coverage packages
+            const packages = lines.slice(0, -2)
+              .map(line => {
+                const match = line.match(/^(.+?)\s+(\d+\.\d+)%$/);
+                return match ? { pkg: match[1], cov: parseFloat(match[2]) } : null;
+              })
+              .filter(x => x !== null)
+              .sort((a, b) => a.cov - b.cov)
+              .slice(0, 5);
+
+            let comment = `## 📊 Coverage Report\n\n`;
+            comment += `**Total Coverage:** ${coverage}%\n\n`;
+            comment += `### Lowest Coverage Packages\n\n`;
+            comment += `| Package | Coverage |\n`;
+            comment += `|---------|----------|\n`;
+            packages.forEach(p => {
+              comment += `| ${p.pkg} | ${p.cov}% |\n`;
+            });
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests, e2e-tests]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.1'
+          cache: true
+
+      - name: Build application
+        run: make build
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: heatmap-calendar-binary
+          path: bin/
+          retention-days: 7
