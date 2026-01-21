@@ -1,0 +1,63 @@
+# Fallback Docker Compose for E2E tests when testcontainers is not available.
+#
+# Usage:
+#   # Start the test database
+#   docker-compose -f e2e/docker-compose.test.yml up -d
+#
+#   # Run E2E tests with external database
+#   TEST_DATABASE_URL="postgres://test_user:test_pass@localhost:5433/load_calendar_test?sslmode=disable" \
+#     go test -v ./e2e/...
+#
+#   # Stop and remove containers
+#   docker-compose -f e2e/docker-compose.test.yml down -v
+#
+# This is useful when:
+#   - Docker socket is not available (some CI environments)
+#   - testcontainers-go has compatibility issues
+#   - You want persistent test data between runs (debugging)
+
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: load-calendar-test-db
+    environment:
+      POSTGRES_DB: load_calendar_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_pass
+    ports:
+      - "5433:5432"  # Use 5433 to avoid conflict with dev database
+    volumes:
+      - postgres-test-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d load_calendar_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    tmpfs:
+      - /var/lib/postgresql/data  # Use tmpfs for faster tests (data not persisted)
+
+  # Optional: Run migrations automatically
+  migrate:
+    image: golang:1.22-alpine
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    working_dir: /app
+    volumes:
+      - ..:/app:ro
+    environment:
+      DATABASE_URL: postgres://test_user:test_pass@postgres-test:5432/load_calendar_test?sslmode=disable
+    command: >
+      sh -c "
+        go run ./cmd/server &
+        sleep 5
+        kill %1
+      "
+    # This runs the server briefly to trigger migrations, then exits
+
+volumes:
+  postgres-test-data:
+
+networks:
+  default:
+    name: load-calendar-test-network
