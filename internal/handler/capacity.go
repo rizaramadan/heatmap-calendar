@@ -67,6 +67,7 @@ func (h *CapacityHandler) MyCapacityPage(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Not authenticated"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /api/my-capacity [post]
+//
 //nolint:gocognit,nestif // Complex form parsing logic is acceptable here
 func (h *CapacityHandler) UpdateMyCapacity(c echo.Context) error {
 	userEmail := middleware.GetUserEmail(c)
