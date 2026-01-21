@@ -147,7 +147,7 @@ func (env *TestEnv) Teardown() {
 	// Close browser if started
 	env.mu.Lock()
 	if env.browser != nil {
-		env.browser.Close()
+		_ = env.browser.Close()
 	}
 	env.mu.Unlock()
 

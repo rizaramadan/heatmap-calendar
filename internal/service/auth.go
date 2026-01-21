@@ -97,7 +97,7 @@ func (s *AuthService) VerifyOTP(ctx context.Context, email, otp string) (bool, e
 	// Check expiry
 	if time.Now().After(expiresAt) {
 		// Clean up expired OTP
-		s.pool.Exec(ctx, `DELETE FROM otp_records WHERE email = $1`, email)
+		_, _ = s.pool.Exec(ctx, `DELETE FROM otp_records WHERE email = $1`, email)
 		return false, ErrOTPExpired
 	}
 
@@ -107,7 +107,7 @@ func (s *AuthService) VerifyOTP(ctx context.Context, email, otp string) (bool, e
 	}
 
 	// Delete used OTP
-	s.pool.Exec(ctx, `DELETE FROM otp_records WHERE email = $1`, email)
+	_, _ = s.pool.Exec(ctx, `DELETE FROM otp_records WHERE email = $1`, email)
 
 	return true, nil
 }
@@ -145,7 +145,7 @@ func (s *AuthService) ValidateSession(ctx context.Context, token string) (string
 
 	// Check expiry
 	if time.Now().After(expiresAt) {
-		s.pool.Exec(ctx, `DELETE FROM sessions WHERE token = $1`, token)
+		_, _ = s.pool.Exec(ctx, `DELETE FROM sessions WHERE token = $1`, token)
 		return "", ErrSessionInvalid
 	}
 
@@ -202,7 +202,7 @@ func (s *AuthService) getLarkTenantAccessToken(ctx context.Context) (string, err
 	if err != nil {
 		return "", fmt.Errorf("failed to send token request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var tokenResp struct {
 		Code              int    `json:"code"`
@@ -263,12 +263,12 @@ func (s *AuthService) sendOTPViaLark(ctx context.Context, email, otp string) err
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Check response status
 	if resp.StatusCode != http.StatusOK {
 		var result map[string]interface{}
-		json.NewDecoder(resp.Body).Decode(&result)
+		_ = json.NewDecoder(resp.Body).Decode(&result)
 		return fmt.Errorf("lark API returned status %d: %v", resp.StatusCode, result)
 	}
 

@@ -144,12 +144,12 @@ func StartService(ctx context.Context, cfg ServiceConfig) (*Service, func(), err
 	// Wait for service to be ready
 	if err := waitForService(ctx, url, 30*time.Second); err != nil {
 		// Kill the process if it didn't become ready
-		svc.Stop()
+		_ = svc.Stop()
 		return nil, nil, fmt.Errorf("service failed to become ready: %w", err)
 	}
 
 	cleanup := func() {
-		svc.Stop()
+		_ = svc.Stop()
 	}
 
 	return svc, cleanup, nil
@@ -164,7 +164,7 @@ func (s *Service) Stop() error {
 	// Send SIGTERM for graceful shutdown
 	if err := s.Process.Signal(syscall.SIGTERM); err != nil {
 		// If SIGTERM fails, try SIGKILL
-		s.Process.Kill()
+		_ = s.Process.Kill()
 	}
 
 	// Wait for process to exit (with timeout)
@@ -179,7 +179,7 @@ func (s *Service) Stop() error {
 		return nil
 	case <-time.After(5 * time.Second):
 		// Force kill if graceful shutdown takes too long
-		s.Process.Kill()
+		_ = s.Process.Kill()
 		return nil
 	}
 }
@@ -191,7 +191,7 @@ func (s *Service) HealthCheck(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	if resp.StatusCode >= 500 {
 		return fmt.Errorf("service returned status %d", resp.StatusCode)
@@ -205,7 +205,7 @@ func findAvailablePort() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 	return listener.Addr().(*net.TCPAddr).Port, nil
 }
 
@@ -264,7 +264,7 @@ func waitForService(ctx context.Context, url string, timeout time.Duration) erro
 
 		resp, err := client.Get(url + "/api/entities")
 		if err == nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			return nil
 		}
 

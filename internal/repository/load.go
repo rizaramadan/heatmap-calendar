@@ -23,7 +23,7 @@ func (r *LoadRepository) UpsertByExternalID(ctx context.Context, load *models.Lo
 	if err != nil {
 		return 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	var loadID int
 
@@ -356,7 +356,7 @@ func (r *LoadRepository) AddAssignees(ctx context.Context, loadID int, assignmen
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Insert or update assignments
 	for _, a := range assignments {

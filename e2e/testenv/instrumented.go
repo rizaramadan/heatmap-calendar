@@ -152,12 +152,12 @@ func StartInstrumentedService(ctx context.Context, cfg InstrumentedConfig) (*Ins
 
 	// Wait for service to be ready
 	if err := waitForService(ctx, url, 30*time.Second); err != nil {
-		svc.Stop()
+		_ = svc.Stop()
 		return nil, nil, fmt.Errorf("instrumented service failed to become ready: %w", err)
 	}
 
 	cleanup := func() {
-		svc.Stop()
+		_ = svc.Stop()
 	}
 
 	return svc, cleanup, nil
@@ -175,7 +175,7 @@ func (s *InstrumentedService) Stop() error {
 	// Send SIGTERM for graceful shutdown (writes coverage)
 	if err := s.Process.Signal(syscall.SIGTERM); err != nil {
 		// SIGKILL won't write coverage data, but may be necessary
-		s.Process.Kill()
+		_ = s.Process.Kill()
 		return fmt.Errorf("failed to send SIGTERM, coverage may be incomplete: %w", err)
 	}
 
@@ -191,7 +191,7 @@ func (s *InstrumentedService) Stop() error {
 		return nil
 	case <-time.After(10 * time.Second):
 		// Force kill - coverage data may be incomplete
-		s.Process.Kill()
+		_ = s.Process.Kill()
 		return fmt.Errorf("service shutdown timeout, coverage may be incomplete")
 	}
 }

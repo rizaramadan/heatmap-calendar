@@ -156,7 +156,10 @@ func (b *Browser) Wait(selector string) error {
 //	defer browser.Close()
 func (b *Browser) Close() error {
 	if b.page != nil {
-		b.page.Close()
+		if err := b.page.Close(); err != nil {
+			// Log but don't fail on page close error
+			_ = err
+		}
 	}
 	if b.browser != nil {
 		return b.browser.Close()

@@ -96,7 +96,20 @@ func main() {
 	e.HideBanner = true
 
 	// Middleware
-	e.Use(echoMiddleware.Logger())
+	e.Use(echoMiddleware.RequestLoggerWithConfig(echoMiddleware.RequestLoggerConfig{
+		LogStatus:   true,
+		LogURI:      true,
+		LogError:    true,
+		HandleError: true,
+		LogValuesFunc: func(c echo.Context, v echoMiddleware.RequestLoggerValues) error {
+			if v.Error == nil {
+				log.Printf("[%s] %s %d\n", v.Method, v.URI, v.Status)
+			} else {
+				log.Printf("[%s] %s %d - %v\n", v.Method, v.URI, v.Status, v.Error)
+			}
+			return nil
+		},
+	}))
 	e.Use(echoMiddleware.Recover())
 	e.Use(echoMiddleware.CORS())
 

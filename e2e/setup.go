@@ -117,7 +117,7 @@ func Setup(cfg Config) (*TestEnv, error) {
 		return nil, fmt.Errorf("failed to find available port: %w", err)
 	}
 	port := listener.Addr().(*net.TCPAddr).Port
-	listener.Close()
+	_ = listener.Close()
 
 	serverURL := fmt.Sprintf("http://localhost:%d", port)
 
@@ -187,12 +187,12 @@ func (env *TestEnv) Teardown() {
 	if env.server != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		env.server.Shutdown(ctx)
+		_ = env.server.Shutdown(ctx)
 	}
 
 	// Close browser
 	if env.Browser != nil {
-		env.Browser.Close()
+		_ = env.Browser.Close()
 	}
 
 	// Close database
@@ -358,7 +358,7 @@ func (env *TestEnv) waitForServer(timeout time.Duration) error {
 	for time.Now().Before(deadline) {
 		resp, err := client.Get(env.ServerURL + "/api/entities")
 		if err == nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			return nil
 		}
 		time.Sleep(50 * time.Millisecond)

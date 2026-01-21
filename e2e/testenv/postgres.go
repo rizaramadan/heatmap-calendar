@@ -89,34 +89,34 @@ func StartPostgres(ctx context.Context, cfg PostgresConfig) (*PostgresContainer,
 	// Get connection string
 	connStr, err := container.ConnectionString(ctx, "sslmode=disable")
 	if err != nil {
-		container.Terminate(ctx)
+		_ = container.Terminate(ctx)
 		return nil, nil, fmt.Errorf("failed to get connection string: %w", err)
 	}
 
 	// Get host and port for external connections
 	host, err := container.Host(ctx)
 	if err != nil {
-		container.Terminate(ctx)
+		_ = container.Terminate(ctx)
 		return nil, nil, fmt.Errorf("failed to get container host: %w", err)
 	}
 
 	mappedPort, err := container.MappedPort(ctx, "5432")
 	if err != nil {
-		container.Terminate(ctx)
+		_ = container.Terminate(ctx)
 		return nil, nil, fmt.Errorf("failed to get mapped port: %w", err)
 	}
 
 	// Connect to database
 	pool, err := pgxpool.New(ctx, connStr)
 	if err != nil {
-		container.Terminate(ctx)
+		_ = container.Terminate(ctx)
 		return nil, nil, fmt.Errorf("failed to connect to postgres: %w", err)
 	}
 
 	// Verify connection
 	if err := pool.Ping(ctx); err != nil {
 		pool.Close()
-		container.Terminate(ctx)
+		_ = container.Terminate(ctx)
 		return nil, nil, fmt.Errorf("failed to ping postgres: %w", err)
 	}
 
@@ -124,7 +124,7 @@ func StartPostgres(ctx context.Context, cfg PostgresConfig) (*PostgresContainer,
 	db := &database.DB{Pool: pool}
 	if err := db.RunMigrations(ctx); err != nil {
 		pool.Close()
-		container.Terminate(ctx)
+		_ = container.Terminate(ctx)
 		return nil, nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 
@@ -138,7 +138,7 @@ func StartPostgres(ctx context.Context, cfg PostgresConfig) (*PostgresContainer,
 
 	cleanup := func() {
 		pool.Close()
-		container.Terminate(context.Background())
+		_ = container.Terminate(context.Background())
 	}
 
 	return pg, cleanup, nil

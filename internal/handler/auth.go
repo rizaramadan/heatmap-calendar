@@ -177,7 +177,7 @@ func (h *AuthHandler) VerifyOTP(c echo.Context) error {
 func (h *AuthHandler) Logout(c echo.Context) error {
 	cookie, err := c.Cookie(middleware.SessionCookieName)
 	if err == nil {
-		h.authService.DeleteSession(c.Request().Context(), cookie.Value)
+		_ = h.authService.DeleteSession(c.Request().Context(), cookie.Value)
 	}
 
 	middleware.ClearSessionCookie(c)
