@@ -11,7 +11,11 @@
       "Bash(find:*)",
       "Bash(xargs:*)",
       "Bash(go mod tidy:*)",
-      "Bash(go test:*)"
+      "Bash(go test:*)",
+      "Bash(chmod:*)",
+      "Bash(bash -n:*)",
+      "Bash(bash:*)",
+      "Bash(make:*)"
     ]
   }
 }
