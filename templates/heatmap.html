@@ -42,13 +42,42 @@
 </head>
 
 <body class="min-h-screen">
-    <nav class="bg-white/80 backdrop-blur-sm">
-        <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
-            <div class="flex justify-between h-16 items-center">
-                <div class="flex items-center">
-                    <h1 class="text-2xl font-bold text-gray-800">Load Calendar</h1>
-                </div>
-                <div class="flex items-center space-x-4">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        {{if .Error}}
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {{.Error}}
+        </div>
+        {{end}}
+
+        <!--  Unified Heatmap Block -->
+        <div class="bg-white rounded-xl shadow-sm card-shadow p-6">
+            <!--  Header: Title, Selector, and User Controls -->
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-100">
+                <!--  Left: Title/Logo -->
+                <h1 class="text-xl font-bold text-gray-800 shrink-0">Load Calendar</h1>
+                
+                <!--  Center: Entity Selector -->
+                <form action="/" method="GET" class="flex gap-2 items-center flex-1 max-w-md" id="entityForm">
+                    <div class="flex-1 relative">
+                        <input type="text" 
+                            id="entitySearch" 
+                            placeholder="Search person or group..."
+                            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                            autocomplete="off"
+                            value="{{range .Entities}}{{if eq $.SelectedEntity .ID}}{{.Title}} ({{.Type}}){{end}}{{end}}">
+                        <input type="hidden" name="entity" id="entity" value="{{.SelectedEntity}}">
+                        
+                        <!--  Dropdown suggestions -->
+                        <div id="suggestions" class="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto hidden">
+                        </div>
+                    </div>
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm shrink-0">
+                        View
+                    </button>
+                </form>
+                
+                <!--  Right: User Controls -->
+                <div class="flex items-center gap-3 shrink-0">
                     <button class="dark-toggle" onclick="toggleDarkMode()" title="Toggle dark mode">
                         <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1m-16 0H1m15.657 5.657l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -58,185 +87,152 @@
                         </svg>
                     </button>
                     {{if .IsAuthenticated}}
-                    <span class="text-gray-600 text-sm">{{.UserEmail}}</span>
+                    <span class="text-gray-500 text-sm hidden sm:inline">{{.UserEmail}}</span>
                     <a href="/my-capacity" class="text-blue-600 hover:text-blue-700 text-sm font-medium">My Capacity</a>
                     <button hx-post="/auth/logout" hx-swap="none"
-                        class="text-gray-600 hover:text-gray-800 text-sm">Logout</button>
+                        class="text-gray-500 hover:text-gray-700 text-sm">Logout</button>
                     {{else}}
-                    <a href="/login" class="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 font-medium shadow-sm">Login</a>
+                    <a href="/login" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow-sm">Login</a>
                     {{end}}
                 </div>
             </div>
-        </div>
-    </nav>
-
-    <main class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-8">
-        <div class="space-y-6">
-            <!-- Entity Selector -->
-            <div class="bg-white rounded-xl shadow-sm card-shadow p-6">
-                <h2 class="text-lg font-semibold mb-4 text-gray-700">Select Person or Group</h2>
-                <form action="/" method="GET" class="flex gap-4 items-end" id="entityForm">
-                    <div class="flex-1 relative">
-                        <input type="text" 
-                            id="entitySearch" 
-                            placeholder="Type to search..."
-                            class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
-                            autocomplete="off"
-                            value="{{range .Entities}}{{if eq $.SelectedEntity .ID}}{{.Title}} ({{.Type}}){{end}}{{end}}">
-                        <input type="hidden" name="entity" id="entity" value="{{.SelectedEntity}}">
-                        
-                        <!-- Dropdown suggestions -->
-                        <div id="suggestions" class="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto hidden">
-                        </div>
-                    </div>
-                    <button type="submit" class="bg-blue-600 text-white px-8 py-2.5 rounded-lg text-base font-medium hover:bg-blue-700 shadow-sm">
-                        View
-                    </button>
-                </form>
-            </div>
-            
-            <script>
-                // Entity data
-                const entities = [
-                    {{range .Entities}}
-                    {id: '{{.ID}}', title: '{{.Title}}', type: '{{.Type}}'},
-                    {{end}}
-                ];
-
-                const searchInput = document.getElementById('entitySearch');
-                const hiddenInput = document.getElementById('entity');
-                const form = document.getElementById('entityForm');
-                const suggestionsDiv = document.getElementById('suggestions');
-
-                // Show/filter suggestions
-                function showSuggestions(query) {
-                    const filtered = entities.filter(entity => {
-                        const fullText = `${entity.title} (${entity.type})`.toLowerCase();
-                        return fullText.includes(query.toLowerCase());
-                    });
-
-                    if (filtered.length === 0 || (filtered.length === 1 && query && `${filtered[0].title} (${filtered[0].type})`.toLowerCase() === query.toLowerCase())) {
-                        suggestionsDiv.classList.add('hidden');
-                        return;
-                    }
-
-                    suggestionsDiv.innerHTML = filtered.map(entity => 
-                        `<div class="px-4 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0" 
-                              data-id="${entity.id}" 
-                              data-title="${entity.title}" 
-                              data-type="${entity.type}">
-                            ${entity.title} <span class="text-gray-500 text-sm">(${entity.type})</span>
-                         </div>`
-                    ).join('');
-
-                    suggestionsDiv.classList.remove('hidden');
-
-                    // Add click handlers
-                    suggestionsDiv.querySelectorAll('[data-id]').forEach(item => {
-                        item.addEventListener('click', function() {
-                            selectEntity(this.dataset.id, this.dataset.title, this.dataset.type);
-                        });
-                    });
-                }
-
-                // Select entity
-                function selectEntity(id, title, type) {
-                    searchInput.value = `${title} (${type})`;
-                    hiddenInput.value = id;
-                    suggestionsDiv.classList.add('hidden');
-                    form.submit();
-                }
-
-                // Input event
-                searchInput.addEventListener('input', function() {
-                    const value = this.value.trim();
-                    if (value.length === 0) {
-                        showSuggestions('');
-                    } else {
-                        showSuggestions(value);
-                    }
-                });
-
-                // Focus event - show all options
-                searchInput.addEventListener('focus', function() {
-                    showSuggestions(this.value || '');
-                });
-
-                // Click outside to close
-                document.addEventListener('click', function(e) {
-                    if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
-                        suggestionsDiv.classList.add('hidden');
-                    }
-                });
-
-                // Enter key to submit
-                searchInput.addEventListener('keydown', function(e) {
-                    if (e.key === 'Enter') {
-                        const firstSuggestion = suggestionsDiv.querySelector('[data-id]');
-                        if (firstSuggestion) {
-                            selectEntity(firstSuggestion.dataset.id, firstSuggestion.dataset.title, firstSuggestion.dataset.type);
-                        }
-                    }
-                });
-            </script>
-
-            {{if .Error}}
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                {{.Error}}
-            </div>
-            {{end}}
 
             {{if .HeatmapData}}
-            <!-- Heatmap Display -->
-            <div class="bg-white rounded-xl shadow-sm card-shadow p-8">
-                <div class="flex justify-between items-start mb-8">
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-800">{{.HeatmapData.Entity.Title}}</h2>
-                        <p class="text-gray-500 text-sm mt-1">
-                            Type: {{.HeatmapData.Entity.Type}} | Capacity: {{printf "%.0f"
-                            .HeatmapData.Entity.DefaultCapacity}} capacity
-                        </p>
-                    </div>
-                    <div class="flex items-center gap-3 text-sm bg-gray-50 px-4 py-2 rounded-lg">
-                        <span class="text-gray-600 font-medium">Load Legend:</span>
-                        <div class="flex items-center gap-1.5">
-                            <span class="w-4 h-4 rounded" style="background-color: #86efac"></span>
-                            <span class="text-gray-700">Green</span>
-                        </div>
-                        <div class="flex items-center gap-1.5">
-                            <span class="w-4 h-4 rounded" style="background-color: #fcd34d"></span>
-                            <span class="text-gray-700">Amber</span>
-                        </div>
-                        <div class="flex items-center gap-1.5">
-                            <span class="w-4 h-4 rounded" style="background-color: #f87171"></span>
-                            <span class="text-gray-700">Red</span>
-                        </div>
-                        <div class="flex items-center gap-1.5">
-                            <span class="w-4 h-4 rounded" style="background-color: #7f1d1d"></span>
-                            <span class="text-gray-700">Dark</span>
-                        </div>
-                    </div>
+            <!--  Entity Info and Legend -->
+            <div class="flex flex-wrap justify-between items-start gap-4 mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800">{{.HeatmapData.Entity.Title}}</h2>
+                    <p class="text-gray-500 text-sm mt-1">
+                        Type: {{.HeatmapData.Entity.Type}} | Capacity: {{printf "%.0f"
+                        .HeatmapData.Entity.DefaultCapacity}} capacity
+                    </p>
                 </div>
-
-                <div id="heatmap-container">
-                    {{template "heatmap_grid_inline" .}}
+                <div class="flex items-center gap-3 text-sm bg-gray-50 px-4 py-2 rounded-lg">
+                    <span class="text-gray-600 font-medium">Load Legend:</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-4 h-4 rounded" style="background-color: #86efac"></span>
+                        <span class="text-gray-700">Green</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-4 h-4 rounded" style="background-color: #fcd34d"></span>
+                        <span class="text-gray-700">Amber</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-4 h-4 rounded" style="background-color: #f87171"></span>
+                        <span class="text-gray-700">Red</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-4 h-4 rounded" style="background-color: #7f1d1d"></span>
+                        <span class="text-gray-700">Dark</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Day Details Panel -->
-            <div id="day-details" class="bg-white rounded-xl shadow-sm card-shadow p-8 hidden">
-                <div id="day-details-content">
-                    <!-- Loaded via HTMX -->
-                </div>
+            <div id="heatmap-container">
+                {{template "heatmap_grid_inline" .}}
             </div>
             {{else if .SelectedEntity}}
             <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
                 No data available for this entity.
             </div>
+            {{else}}
+            <div class="text-center py-12 text-gray-500">
+                <p class="text-lg">Select a person or group above to view their load calendar</p>
+            </div>
             {{end}}
         </div>
 
+        <!--  Day Details Panel -->
+        <div id="day-details" class="bg-white rounded-xl shadow-sm card-shadow p-6 mt-4 hidden">
+            <div id="day-details-content">
+                <!--  Loaded via HTMX -->
+            </div>
+        </div>
+
         <script>
+            // Entity data
+            const entities = [
+                {{range .Entities}}
+                {id: '{{.ID}}', title: '{{.Title}}', type: '{{.Type}}'},
+                {{end}}
+            ];
+
+            const searchInput = document.getElementById('entitySearch');
+            const hiddenInput = document.getElementById('entity');
+            const form = document.getElementById('entityForm');
+            const suggestionsDiv = document.getElementById('suggestions');
+
+            // Show/filter suggestions
+            function showSuggestions(query) {
+                const filtered = entities.filter(entity => {
+                    const fullText = `${entity.title} (${entity.type})`.toLowerCase();
+                    return fullText.includes(query.toLowerCase());
+                });
+
+                if (filtered.length === 0 || (filtered.length === 1 && query && `${filtered[0].title} (${filtered[0].type})`.toLowerCase() === query.toLowerCase())) {
+                    suggestionsDiv.classList.add('hidden');
+                    return;
+                }
+
+                suggestionsDiv.innerHTML = filtered.map(entity => 
+                    `<div class="px-4 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0" 
+                          data-id="${entity.id}" 
+                          data-title="${entity.title}" 
+                          data-type="${entity.type}">
+                        ${entity.title} <span class="text-gray-500 text-sm">(${entity.type})</span>
+                     </div>`
+                ).join('');
+
+                suggestionsDiv.classList.remove('hidden');
+
+                // Add click handlers
+                suggestionsDiv.querySelectorAll('[data-id]').forEach(item => {
+                    item.addEventListener('click', function() {
+                        selectEntity(this.dataset.id, this.dataset.title, this.dataset.type);
+                    });
+                });
+            }
+
+            // Select entity
+            function selectEntity(id, title, type) {
+                searchInput.value = `${title} (${type})`;
+                hiddenInput.value = id;
+                suggestionsDiv.classList.add('hidden');
+                form.submit();
+            }
+
+            // Input event
+            searchInput.addEventListener('input', function() {
+                const value = this.value.trim();
+                if (value.length === 0) {
+                    showSuggestions('');
+                } else {
+                    showSuggestions(value);
+                }
+            });
+
+            // Focus event - show all options
+            searchInput.addEventListener('focus', function() {
+                showSuggestions(this.value || '');
+            });
+
+            // Click outside to close
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                    suggestionsDiv.classList.add('hidden');
+                }
+            });
+
+            // Enter key to submit
+            searchInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    const firstSuggestion = suggestionsDiv.querySelector('[data-id]');
+                    if (firstSuggestion) {
+                        selectEntity(firstSuggestion.dataset.id, firstSuggestion.dataset.title, firstSuggestion.dataset.type);
+                    }
+                }
+            });
+
             function showDayDetails(entityId, date) {
                 const container = document.getElementById('day-details');
                 const content = document.getElementById('day-details-content');
@@ -249,19 +245,13 @@
             }
         </script>
     </main>
-
-    <footer class="bg-white border-t mt-auto">
-        <div class="max-w-7xl mx-auto px-4 py-4 text-center text-gray-500 text-sm">
-            Load Calendar - Capacity Forecasting System
-        </div>
-    </footer>
 </body>
 
 </html>
 {{end}}
 
 {{define "heatmap_grid_inline"}}
-<div class="overflow-x-auto overflow-y-visible py-4">
+<div class="overflow-x-auto overflow-y-visible py-2">
     <div class="flex gap-8">
         {{range $month := .Months}}
         <div class="min-w-[200px]">
@@ -296,8 +286,4 @@
         {{end}}
     </div>
 </div>
-
-<script>
-    // toggleDarkMode is already defined in the head
-</script>
 {{end}}

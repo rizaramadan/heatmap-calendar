@@ -23,7 +23,7 @@ run: build
 	./bin/server
 
 # Run in development mode with hot reload (requires air)
-dev: docs
+dev: docs lint
 	@if command -v air > /dev/null; then \
 		air; \
 	elif [ -f ~/go/bin/air ]; then \
