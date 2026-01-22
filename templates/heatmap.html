@@ -28,6 +28,70 @@
         .card-shadow {
             box-shadow: 0 1px 3px rgba(0,0,0,0.08);
         }
+        /* Collapsible Sidebar Styles */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            width: 280px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+        }
+        .sidebar.open {
+            transform: translateX(0);
+        }
+        .sidebar-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.3);
+            z-index: 99;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .sidebar-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .sidebar-toggle {
+            position: fixed;
+            left: 12px;
+            top: 12px;
+            z-index: 101;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+        .sidebar-toggle:hover {
+            background: #f3f4f6;
+        }
+        html.dark-mode .sidebar {
+            background: var(--bg-primary);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+        }
+        html.dark-mode .sidebar-toggle {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        html.dark-mode .sidebar-toggle:hover {
+            background: var(--bg-tertiary);
+        }
+        html.dark-mode .sidebar-overlay.open {
+            background: rgba(0,0,0,0.5);
+        }
     </style>
     <script>
         function toggleDarkMode() {
@@ -38,27 +102,77 @@
         if (localStorage.getItem('darkMode') === 'true') {
             document.documentElement.classList.add('dark-mode');
         }
+        
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebar-overlay').classList.toggle('open');
+        }
+        
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebar-overlay').classList.remove('open');
+        }
     </script>
 </head>
 
 <body class="min-h-screen">
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        {{if .Error}}
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {{.Error}}
-        </div>
-        {{end}}
-
-        <!--  Unified Heatmap Block -->
-        <div class="bg-white rounded-xl shadow-sm card-shadow p-6">
-            <!--  Header: Title, Selector, and User Controls -->
-            <div class="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-100">
-                <!--  Left: Title/Logo -->
-                <h1 class="text-xl font-bold text-gray-800 shrink-0">Load Calendar</h1>
-                
-                <!--  Center: Entity Selector -->
-                <form action="/" method="GET" class="flex gap-2 items-center flex-1 max-w-md" id="entityForm">
-                    <div class="flex-1 relative">
+    <!-- Sidebar Toggle Button -->
+    <button class="sidebar-toggle" onclick="toggleSidebar()" title="Open menu">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+    </button>
+    
+    <!-- Sidebar Overlay -->
+    <div id="sidebar-overlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
+    
+    <!-- Collapsible Sidebar -->
+    <aside id="sidebar" class="sidebar">
+        <div class="p-4">
+            <!-- Close button -->
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-lg font-bold text-gray-800">Load Calendar</h1>
+                <button onclick="closeSidebar()" class="text-gray-500 hover:text-gray-700 p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- User Info -->
+            <div class="mb-6 pb-4 border-b border-gray-200">
+                {{if .IsAuthenticated}}
+                <p class="text-gray-600 text-sm mb-3">{{.UserEmail}}</p>
+                <div class="flex flex-col gap-2">
+                    <a href="/my-capacity" class="text-blue-600 hover:text-blue-700 text-sm font-medium">My Capacity</a>
+                    <button hx-post="/auth/logout" hx-swap="none"
+                        class="text-left text-gray-500 hover:text-gray-700 text-sm">Logout</button>
+                </div>
+                {{else}}
+                <a href="/login" class="block w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow-sm text-center">Login</a>
+                {{end}}
+            </div>
+            
+            <!-- Dark Mode Toggle -->
+            <div class="mb-6 pb-4 border-b border-gray-200">
+                <button class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800" onclick="toggleDarkMode()">
+                    <span class="dark-toggle p-0 w-auto h-auto">
+                        <svg class="sun-icon w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1m-16 0H1m15.657 5.657l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <svg class="moon-icon w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                        </svg>
+                    </span>
+                    <span>Toggle Dark Mode</span>
+                </button>
+            </div>
+            
+            <!-- Entity Selector -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select Entity</label>
+                <form action="/" method="GET" id="entityForm">
+                    <div class="relative mb-2">
                         <input type="text" 
                             id="entitySearch" 
                             placeholder="Search person or group..."
@@ -67,47 +181,65 @@
                             value="{{range .Entities}}{{if eq $.SelectedEntity .ID}}{{.Title}} ({{.Type}}){{end}}{{end}}">
                         <input type="hidden" name="entity" id="entity" value="{{.SelectedEntity}}">
                         
-                        <!--  Dropdown suggestions -->
+                        <!-- Dropdown suggestions -->
                         <div id="suggestions" class="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto hidden">
                         </div>
                     </div>
-                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm shrink-0">
+                    <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm">
                         View
                     </button>
                 </form>
-                
-                <!--  Right: User Controls -->
-                <div class="flex items-center gap-3 shrink-0">
-                    <button class="dark-toggle" onclick="toggleDarkMode()" title="Toggle dark mode">
-                        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1m-16 0H1m15.657 5.657l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
-                        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                        </svg>
-                    </button>
-                    {{if .IsAuthenticated}}
-                    <span class="text-gray-500 text-sm hidden sm:inline">{{.UserEmail}}</span>
-                    <a href="/my-capacity" class="text-blue-600 hover:text-blue-700 text-sm font-medium">My Capacity</a>
-                    <button hx-post="/auth/logout" hx-swap="none"
-                        class="text-gray-500 hover:text-gray-700 text-sm">Logout</button>
-                    {{else}}
-                    <a href="/login" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow-sm">Login</a>
-                    {{end}}
-                </div>
             </div>
+        </div>
+    </aside>
 
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        {{if .Error}}
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {{.Error}}
+        </div>
+        {{end}}
+
+        <!-- Unified Heatmap Block -->
+        <div class="bg-white rounded-xl shadow-sm card-shadow p-6">
             {{if .HeatmapData}}
-            <!--  Entity Info and Legend -->
-            <div class="flex flex-wrap justify-between items-start gap-4 mb-6">
+            <!-- Entity Info with Selector -->
+            <div class="flex flex-wrap items-start justify-between gap-4 mb-6">
                 <div>
                     <h2 class="text-xl font-bold text-gray-800">{{.HeatmapData.Entity.Title}}</h2>
                     <p class="text-gray-500 text-sm mt-1">
                         Type: {{.HeatmapData.Entity.Type}} | Capacity: {{printf "%.0f"
-                        .HeatmapData.Entity.DefaultCapacity}} capacity
+                    .HeatmapData.Entity.DefaultCapacity}} capacity
                     </p>
                 </div>
-                <div class="flex items-center gap-3 text-sm bg-gray-50 px-4 py-2 rounded-lg">
+                <!-- Entity Selector (inline) -->
+                <form action="/" method="GET" class="flex gap-2 items-center" id="entityFormInline">
+                    <div class="relative">
+                        <input type="text" 
+                            id="entitySearchInline" 
+                            placeholder="Search person or group..."
+                            class="w-64 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                            autocomplete="off"
+                            value="{{range .Entities}}{{if eq $.SelectedEntity .ID}}{{.Title}} ({{.Type}}){{end}}{{end}}">
+                        <input type="hidden" name="entity" id="entityInline" value="{{.SelectedEntity}}">
+                        
+                        <!-- Dropdown suggestions -->
+                        <div id="suggestionsInline" class="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto hidden">
+                        </div>
+                    </div>
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm">
+                        View
+                    </button>
+                </form>
+            </div>
+
+            <div id="heatmap-container">
+                {{template "heatmap_grid_inline" .}}
+            </div>
+            
+            <!-- Load Legend with Selection Info (below heatmap) -->
+            <div class="flex flex-wrap items-center justify-between gap-4 mt-6 pt-4 border-t border-gray-100">
+                <div class="flex items-center gap-3 text-sm">
                     <span class="text-gray-600 font-medium">Load Legend:</span>
                     <div class="flex items-center gap-1.5">
                         <span class="w-4 h-4 rounded" style="background-color: #86efac"></span>
@@ -126,26 +258,44 @@
                         <span class="text-gray-700">Dark</span>
                     </div>
                 </div>
-            </div>
-
-            <div id="heatmap-container">
-                {{template "heatmap_grid_inline" .}}
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="w-4 h-4 rounded ring-2 ring-blue-600 bg-gray-200"></span>
+                    <span class="text-gray-600">Today</span>
+                </div>
             </div>
             {{else if .SelectedEntity}}
             <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
                 No data available for this entity.
             </div>
             {{else}}
-            <div class="text-center py-12 text-gray-500">
-                <p class="text-lg">Select a person or group above to view their load calendar</p>
+            <div class="text-center py-12">
+                <p class="text-lg text-gray-500 mb-6">Select a person or group to view their load calendar</p>
+                <!-- Entity Selector for empty state -->
+                <form action="/" method="GET" class="flex gap-2 items-center justify-center max-w-md mx-auto" id="entityFormEmpty">
+                    <div class="relative flex-1">
+                        <input type="text" 
+                            id="entitySearchEmpty" 
+                            placeholder="Search person or group..."
+                            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                            autocomplete="off">
+                        <input type="hidden" name="entity" id="entityEmpty" value="">
+                        
+                        <!-- Dropdown suggestions -->
+                        <div id="suggestionsEmpty" class="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto hidden">
+                        </div>
+                    </div>
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm">
+                        View
+                    </button>
+                </form>
             </div>
             {{end}}
         </div>
 
-        <!--  Day Details Panel -->
+        <!-- Day Details Panel -->
         <div id="day-details" class="bg-white rounded-xl shadow-sm card-shadow p-6 mt-4 hidden">
             <div id="day-details-content">
-                <!--  Loaded via HTMX -->
+                <!-- Loaded via HTMX -->
             </div>
         </div>
 
@@ -221,6 +371,14 @@
                 if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
                     suggestionsDiv.classList.add('hidden');
                 }
+                // Also handle inline search
+                const searchInputInline = document.getElementById('entitySearchInline');
+                const suggestionsDivInline = document.getElementById('suggestionsInline');
+                if (searchInputInline && suggestionsDivInline) {
+                    if (!searchInputInline.contains(e.target) && !suggestionsDivInline.contains(e.target)) {
+                        suggestionsDivInline.classList.add('hidden');
+                    }
+                }
             });
 
             // Enter key to submit
@@ -232,6 +390,137 @@
                     }
                 }
             });
+
+            // Setup inline search (on heatmap page)
+            const searchInputInline = document.getElementById('entitySearchInline');
+            const hiddenInputInline = document.getElementById('entityInline');
+            const formInline = document.getElementById('entityFormInline');
+            const suggestionsDivInline = document.getElementById('suggestionsInline');
+
+            if (searchInputInline && suggestionsDivInline) {
+                function showSuggestionsInline(query) {
+                    const filtered = entities.filter(entity => {
+                        const fullText = `${entity.title} (${entity.type})`.toLowerCase();
+                        return fullText.includes(query.toLowerCase());
+                    });
+
+                    if (filtered.length === 0 || (filtered.length === 1 && query && `${filtered[0].title} (${filtered[0].type})`.toLowerCase() === query.toLowerCase())) {
+                        suggestionsDivInline.classList.add('hidden');
+                        return;
+                    }
+
+                    suggestionsDivInline.innerHTML = filtered.map(entity => 
+                        `<div class="px-4 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0" 
+                              data-id="${entity.id}" 
+                              data-title="${entity.title}" 
+                              data-type="${entity.type}">
+                            ${entity.title} <span class="text-gray-500 text-sm">(${entity.type})</span>
+                         </div>`
+                    ).join('');
+
+                    suggestionsDivInline.classList.remove('hidden');
+
+                    suggestionsDivInline.querySelectorAll('[data-id]').forEach(item => {
+                        item.addEventListener('click', function() {
+                            selectEntityInline(this.dataset.id, this.dataset.title, this.dataset.type);
+                        });
+                    });
+                }
+
+                function selectEntityInline(id, title, type) {
+                    searchInputInline.value = `${title} (${type})`;
+                    hiddenInputInline.value = id;
+                    suggestionsDivInline.classList.add('hidden');
+                    formInline.submit();
+                }
+
+                searchInputInline.addEventListener('input', function() {
+                    const value = this.value.trim();
+                    showSuggestionsInline(value);
+                });
+
+                searchInputInline.addEventListener('focus', function() {
+                    showSuggestionsInline(this.value || '');
+                });
+
+                searchInputInline.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        const firstSuggestion = suggestionsDivInline.querySelector('[data-id]');
+                        if (firstSuggestion) {
+                            selectEntityInline(firstSuggestion.dataset.id, firstSuggestion.dataset.title, firstSuggestion.dataset.type);
+                        }
+                    }
+                });
+            }
+
+            // Setup empty state search
+            const searchInputEmpty = document.getElementById('entitySearchEmpty');
+            const hiddenInputEmpty = document.getElementById('entityEmpty');
+            const formEmpty = document.getElementById('entityFormEmpty');
+            const suggestionsDivEmpty = document.getElementById('suggestionsEmpty');
+
+            if (searchInputEmpty && suggestionsDivEmpty) {
+                function showSuggestionsEmpty(query) {
+                    const filtered = entities.filter(entity => {
+                        const fullText = `${entity.title} (${entity.type})`.toLowerCase();
+                        return fullText.includes(query.toLowerCase());
+                    });
+
+                    if (filtered.length === 0 || (filtered.length === 1 && query && `${filtered[0].title} (${filtered[0].type})`.toLowerCase() === query.toLowerCase())) {
+                        suggestionsDivEmpty.classList.add('hidden');
+                        return;
+                    }
+
+                    suggestionsDivEmpty.innerHTML = filtered.map(entity => 
+                        `<div class="px-4 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 text-left" 
+                              data-id="${entity.id}" 
+                              data-title="${entity.title}" 
+                              data-type="${entity.type}">
+                            ${entity.title} <span class="text-gray-500 text-sm">(${entity.type})</span>
+                         </div>`
+                    ).join('');
+
+                    suggestionsDivEmpty.classList.remove('hidden');
+
+                    suggestionsDivEmpty.querySelectorAll('[data-id]').forEach(item => {
+                        item.addEventListener('click', function() {
+                            selectEntityEmpty(this.dataset.id, this.dataset.title, this.dataset.type);
+                        });
+                    });
+                }
+
+                function selectEntityEmpty(id, title, type) {
+                    searchInputEmpty.value = `${title} (${type})`;
+                    hiddenInputEmpty.value = id;
+                    suggestionsDivEmpty.classList.add('hidden');
+                    formEmpty.submit();
+                }
+
+                searchInputEmpty.addEventListener('input', function() {
+                    const value = this.value.trim();
+                    showSuggestionsEmpty(value);
+                });
+
+                searchInputEmpty.addEventListener('focus', function() {
+                    showSuggestionsEmpty(this.value || '');
+                });
+
+                searchInputEmpty.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        const firstSuggestion = suggestionsDivEmpty.querySelector('[data-id]');
+                        if (firstSuggestion) {
+                            selectEntityEmpty(firstSuggestion.dataset.id, firstSuggestion.dataset.title, firstSuggestion.dataset.type);
+                        }
+                    }
+                });
+
+                // Click outside to close empty state suggestions
+                document.addEventListener('click', function(e) {
+                    if (!searchInputEmpty.contains(e.target) && !suggestionsDivEmpty.contains(e.target)) {
+                        suggestionsDivEmpty.classList.add('hidden');
+                    }
+                });
+            }
 
             function showDayDetails(entityId, date) {
                 const container = document.getElementById('day-details');
