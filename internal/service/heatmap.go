@@ -30,7 +30,7 @@ func NewHeatmapService(
 	}
 }
 
-// GetHeatmapData returns heatmap data for an entity spanning 3 months previous and 6 months ahead from today
+// GetHeatmapData returns heatmap data for an entity spanning 1 month previous and 6 months ahead from today
 func (s *HeatmapService) GetHeatmapData(ctx context.Context, entityID string, days int) (*models.HeatmapData, error) {
 	// Get the entity
 	entity, err := s.entityRepo.GetByID(ctx, entityID)
@@ -38,11 +38,11 @@ func (s *HeatmapService) GetHeatmapData(ctx context.Context, entityID string, da
 		return nil, fmt.Errorf("failed to get entity: %w", err)
 	}
 
-	// Calculate date range: 3 months previous and 6 months ahead
+	// Calculate date range: 1 month previous and 6 months ahead
 	// Use UTC for consistent date handling
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-	startDate := today.AddDate(0, -3, 0) // 3 months before today
+	startDate := today.AddDate(0, -1, 0) // 1 month before today
 	endDate := today.AddDate(0, 6, 0)    // 6 months after today
 
 	// Get capacities for the date range
