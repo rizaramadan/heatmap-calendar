@@ -245,25 +245,35 @@ html.dark-mode .hover\:text-gray-800:hover {
 }
 
 /* Dropdown/autocomplete suggestions */
-#suggestions {
+#suggestions,
+#suggestionsInline,
+#suggestionsEmpty {
     background-color: white;
     color: #1f2937;
 }
 
-#suggestions > div {
+#suggestions > div,
+#suggestionsInline > div,
+#suggestionsEmpty > div {
     color: #1f2937;
 }
 
-html.dark-mode #suggestions {
+html.dark-mode #suggestions,
+html.dark-mode #suggestionsInline,
+html.dark-mode #suggestionsEmpty {
     background-color: var(--bg-primary) !important;
     color: var(--text-primary) !important;
     border-color: var(--border-color) !important;
 }
 
-html.dark-mode #suggestions > div {
+html.dark-mode #suggestions > div,
+html.dark-mode #suggestionsInline > div,
+html.dark-mode #suggestionsEmpty > div {
     color: var(--text-primary) !important;
 }
 
-html.dark-mode #suggestions .hover\:bg-blue-50:hover {
+html.dark-mode #suggestions .hover\:bg-blue-50:hover,
+html.dark-mode #suggestionsInline .hover\:bg-blue-50:hover,
+html.dark-mode #suggestionsEmpty .hover\:bg-blue-50:hover {
     background-color: var(--hover-bg) !important;
 }
