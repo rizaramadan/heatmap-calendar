@@ -38,6 +38,24 @@ func (r *EntityRepository) GetByID(ctx context.Context, id string) (*models.Enti
 	return entity, nil
 }
 
+// GetByEmployeeID retrieves an entity by its employee ID
+func (r *EntityRepository) GetByEmployeeID(ctx context.Context, employeeID string) (*models.Entity, error) {
+	entity := &models.Entity{}
+	err := r.pool.QueryRow(ctx,
+		`SELECT id, title, type, employee_id, default_capacity, created_at
+		 FROM entities WHERE employee_id = $1`, employeeID).Scan(
+		&entity.ID, &entity.Title, &entity.Type, &entity.EmployeeID, &entity.DefaultCapacity, &entity.CreatedAt)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrEntityNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get entity by employee_id: %w", err)
+	}
+
+	return entity, nil
+}
+
 // Create creates a new entity
 func (r *EntityRepository) Create(ctx context.Context, entity *models.Entity) error {
 	_, err := r.pool.Exec(ctx,

@@ -101,6 +101,19 @@ type UpsertLoadRequest struct {
 	} `json:"assignees" validate:"required,min=1,dive"`
 }
 
+// UpsertLoadByEmployeeIDRequest is the request body for the load upsert endpoint using employee_id
+type UpsertLoadByEmployeeIDRequest struct {
+	ExternalID string `json:"external_id" validate:"required"`
+	Title      string `json:"title" validate:"required"`
+	Source     string `json:"source,omitempty"`
+	URL        string `json:"url,omitempty"` // Link back to original platform
+	Date       string `json:"date" validate:"required"` // Format: YYYY-MM-DD
+	Assignees  []struct {
+		EmployeeID string  `json:"employee_id" validate:"required"`
+		Weight     float64 `json:"weight,omitempty"` // Default 1.0
+	} `json:"assignees" validate:"required,min=1,dive"`
+}
+
 // CreateEntityRequest is the request body for creating an entity
 type CreateEntityRequest struct {
 	ID              string  `json:"id" validate:"required"`

@@ -93,6 +93,75 @@ func (s *LoadService) UpsertLoad(ctx context.Context, req *models.UpsertLoadRequ
 	return loadID, nil
 }
 
+// UpsertLoadByEmployeeID creates or updates a load with its assignments using employee_id
+func (s *LoadService) UpsertLoadByEmployeeID(ctx context.Context, req *models.UpsertLoadByEmployeeIDRequest) (int, error) {
+	// Parse date
+	date, err := time.Parse("2006-01-02", req.Date)
+	if err != nil {
+		return 0, fmt.Errorf("invalid date format: %w", err)
+	}
+
+	// Map employee_id to entity email (ID)
+	type assigneeMapping struct {
+		employeeID string
+		email      string
+		weight     float64
+	}
+	assigneeMappings := make([]assigneeMapping, 0, len(req.Assignees))
+
+	// Look up each assignee by employee_id
+	for _, a := range req.Assignees {
+		entity, err := s.entityRepo.GetByEmployeeID(ctx, a.EmployeeID)
+		if err != nil {
+			return 0, fmt.Errorf("assignee with employee_id %s not found: %w", a.EmployeeID, err)
+		}
+
+		weight := a.Weight
+		if weight == 0 {
+			weight = 1.0 // Default weight
+		}
+
+		assigneeMappings = append(assigneeMappings, assigneeMapping{
+			employeeID: a.EmployeeID,
+			email:      entity.ID,
+			weight:     weight,
+		})
+	}
+
+	// Build load and assignments
+	externalID := req.ExternalID
+	source := req.Source
+	url := req.URL
+	load := &models.Load{
+		ExternalID: &externalID,
+		Title:      req.Title,
+		Source:     &source,
+		URL:        &url,
+		Date:       date,
+	}
+
+	assignments := make([]models.LoadAssignment, 0, len(assigneeMappings))
+	for _, a := range assigneeMappings {
+		assignments = append(assignments, models.LoadAssignment{
+			PersonEmail: a.email,
+			Weight:      a.weight,
+		})
+	}
+
+	// Upsert the load
+	loadID, err := s.loadRepo.UpsertByExternalID(ctx, load, assignments)
+	if err != nil {
+		return 0, fmt.Errorf("failed to upsert load: %w", err)
+	}
+
+	// Trigger webhook alerts for affected persons (in background)
+	for _, a := range assigneeMappings {
+		s.webhookService.CheckAndAlert(ctx, a.email, date)
+	}
+
+	return loadID, nil
+}
+
 // GetLoadsByDateRange returns loads within a date range
 func (s *LoadService) GetLoadsByDateRange(ctx context.Context, start, end time.Time) ([]models.LoadWithAssignments, error) {
 	return s.loadRepo.GetLoadsByDateRange(ctx, start, end)

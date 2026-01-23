@@ -72,6 +72,52 @@ func (h *APIHandler) UpsertLoad(c echo.Context) error {
 	})
 }
 
+// UpsertLoadByEmployeeID handles the endpoint for creating/updating loads using employee_id
+// @Summary Upsert a load by employee ID
+// @Description Create or update a load item with assignments using employee_id instead of email
+// @Tags Loads
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param load body models.UpsertLoadByEmployeeIDRequest true "Load data to upsert"
+// @Success 200 {object} map[string]interface{} "Success with load ID"
+// @Failure 400 {object} map[string]string "Invalid request body"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "Assignee not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/loads/upsert-by-employee-id [post]
+func (h *APIHandler) UpsertLoadByEmployeeID(c echo.Context) error {
+	var req models.UpsertLoadByEmployeeIDRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "invalid request body",
+		})
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": err.Error(),
+		})
+	}
+
+	loadID, err := h.loadService.UpsertLoadByEmployeeID(c.Request().Context(), &req)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return c.JSON(http.StatusNotFound, map[string]string{
+				"error": err.Error(),
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"load_id": loadID,
+	})
+}
+
 // ListEntities returns all entities
 // @Summary List all entities
 // @Description Returns all entities or filters by type (person/group)
