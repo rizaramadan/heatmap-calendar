@@ -61,7 +61,7 @@
                 <form hx-post="/api/my-capacity" hx-target="#form-result" hx-swap="innerHTML" class="space-y-6">
                     <div>
                         <label for="default_capacity" class="block text-sm font-medium text-gray-700 mb-1">Default Daily Capacity</label>
-                        <input type="number" name="default_capacity" id="default_capacity" step="0.5" min="0" value='{{printf "%.1f" .Entity.DefaultCapacity}}' class="w-32 border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                        <input type="number" name="default_capacity" id="default_capacity" step="0.1" min="0" value='{{printf "%.1f" .Entity.DefaultCapacity}}' class="w-32 border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
                         <p class="text-sm text-gray-500 mt-1">Your standard capacity for most days. Set to 0 for days off.</p>
                     </div>
 
@@ -128,7 +128,7 @@
 
                 const row = document.createElement('div');
                 row.className = 'flex gap-3 items-center override-row';
-                row.innerHTML = '<input type="date" name="date_overrides[' + overrideIndex + '][date]" value="' + today + '" class="border border-gray-300 rounded-md px-3 py-2"><input type="number" name="date_overrides[' + overrideIndex + '][capacity]" step="0.5" min="0" value="0" class="w-24 border border-gray-300 rounded-md px-3 py-2"><button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700">Remove</button>';
+                row.innerHTML = '<input type="date" name="date_overrides[' + overrideIndex + '][date]" value="' + today + '" class="border border-gray-300 rounded-md px-3 py-2"><input type="number" name="date_overrides[' + overrideIndex + '][capacity]" step="0.1" min="0" value="0" class="w-24 border border-gray-300 rounded-md px-3 py-2"><button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700">Remove</button>';
                 container.appendChild(row);
                 overrideIndex++;
             }
