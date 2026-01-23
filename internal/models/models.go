@@ -17,6 +17,7 @@ type Entity struct {
 	ID              string     `json:"id"`               // email for persons, string-id for groups
 	Title           string     `json:"title"`            // Display name
 	Type            EntityType `json:"type"`             // "person" or "group"
+	EmployeeID      *string    `json:"employee_id,omitempty"` // Optional employee identifier
 	DefaultCapacity float64    `json:"default_capacity"` // Default daily capacity
 	CreatedAt       time.Time  `json:"created_at"`
 }
@@ -105,7 +106,15 @@ type CreateEntityRequest struct {
 	ID              string  `json:"id" validate:"required"`
 	Title           string  `json:"title" validate:"required"`
 	Type            string  `json:"type" validate:"required,oneof=person group"`
+	EmployeeID      *string `json:"employee_id,omitempty"`
 	DefaultCapacity float64 `json:"default_capacity,omitempty"`
+}
+
+// UpdateEntityRequest is the request body for updating an entity
+type UpdateEntityRequest struct {
+	Title           *string  `json:"title,omitempty"`
+	EmployeeID      *string  `json:"employee_id,omitempty"`
+	DefaultCapacity *float64 `json:"default_capacity,omitempty"`
 }
 
 // UpdateCapacityRequest is the request body for updating capacity

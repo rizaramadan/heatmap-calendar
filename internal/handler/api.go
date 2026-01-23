@@ -169,6 +169,7 @@ func (h *APIHandler) CreateEntity(c echo.Context) error {
 		ID:              req.ID,
 		Title:           req.Title,
 		Type:            models.EntityType(req.Type),
+		EmployeeID:      req.EmployeeID,
 		DefaultCapacity: capacity,
 	}
 
@@ -179,6 +180,65 @@ func (h *APIHandler) CreateEntity(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusCreated, entity)
+}
+
+// UpdateEntity updates an existing entity
+// @Summary Update an entity
+// @Description Update an entity's title, employee_id, and/or default_capacity
+// @Tags Entities
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "Entity ID"
+// @Param entity body models.UpdateEntityRequest true "Entity fields to update"
+// @Success 200 {object} models.Entity "Updated entity"
+// @Failure 400 {object} map[string]string "Invalid request body"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "Entity not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/entities/{id} [put]
+func (h *APIHandler) UpdateEntity(c echo.Context) error {
+	id := c.Param("id")
+
+	var req models.UpdateEntityRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "invalid request body",
+		})
+	}
+
+	// Get existing entity
+	entity, err := h.entityRepo.GetByID(c.Request().Context(), id)
+	if err != nil {
+		if errors.Is(err, repository.ErrEntityNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]string{
+				"error": "entity not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+	}
+
+	// Update fields if provided
+	if req.Title != nil {
+		entity.Title = *req.Title
+	}
+	if req.EmployeeID != nil {
+		entity.EmployeeID = req.EmployeeID
+	}
+	if req.DefaultCapacity != nil {
+		entity.DefaultCapacity = *req.DefaultCapacity
+	}
+
+	// Save updated entity
+	if err := h.entityRepo.Update(c.Request().Context(), entity); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, entity)
 }
 
 // DeleteEntity deletes an entity

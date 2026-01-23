@@ -21,6 +21,7 @@ func (db *DB) RunMigrations(ctx context.Context) error {
 		id TEXT PRIMARY KEY,
 		title TEXT NOT NULL,
 		type TEXT CHECK (type IN ('person', 'group')),
+		employee_id TEXT,
 		default_capacity FLOAT DEFAULT 5.0,
 		created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 	);
@@ -66,6 +67,17 @@ func (db *DB) RunMigrations(ctx context.Context) error {
 			WHERE table_schema='load_calendar_data' AND table_name='loads' AND column_name='url'
 		) THEN
 			ALTER TABLE load_calendar_data.loads ADD COLUMN url TEXT;
+		END IF;
+	END $$;
+
+	-- Add employee_id column to entities table if it doesn't exist (migration for existing databases)
+	DO $$
+	BEGIN
+		IF NOT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_schema='load_calendar_data' AND table_name='entities' AND column_name='employee_id'
+		) THEN
+			ALTER TABLE load_calendar_data.entities ADD COLUMN employee_id TEXT;
 		END IF;
 	END $$;
 

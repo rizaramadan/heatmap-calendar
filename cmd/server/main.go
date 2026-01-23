@@ -149,6 +149,7 @@ func main() {
 	apiProtected.POST("/loads/:id/assignees", apiHandler.AddAssigneesToLoad)
 	apiProtected.DELETE("/loads/:id/assignees/:email", apiHandler.RemoveAssigneeFromLoad)
 	apiProtected.POST("/entities", apiHandler.CreateEntity)
+	apiProtected.PUT("/entities/:id", apiHandler.UpdateEntity)
 	apiProtected.DELETE("/entities/:id", apiHandler.DeleteEntity)
 	apiProtected.GET("/groups/:id/members", apiHandler.GetGroupMembers)
 	apiProtected.POST("/groups/:id/members", apiHandler.AddGroupMember)

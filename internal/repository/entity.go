@@ -24,9 +24,9 @@ func NewEntityRepository(pool *pgxpool.Pool) *EntityRepository {
 func (r *EntityRepository) GetByID(ctx context.Context, id string) (*models.Entity, error) {
 	entity := &models.Entity{}
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, title, type, default_capacity, created_at
+		`SELECT id, title, type, employee_id, default_capacity, created_at
 		 FROM entities WHERE id = $1`, id).Scan(
-		&entity.ID, &entity.Title, &entity.Type, &entity.DefaultCapacity, &entity.CreatedAt)
+		&entity.ID, &entity.Title, &entity.Type, &entity.EmployeeID, &entity.DefaultCapacity, &entity.CreatedAt)
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrEntityNotFound
@@ -41,9 +41,9 @@ func (r *EntityRepository) GetByID(ctx context.Context, id string) (*models.Enti
 // Create creates a new entity
 func (r *EntityRepository) Create(ctx context.Context, entity *models.Entity) error {
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO entities (id, title, type, default_capacity)
-		 VALUES ($1, $2, $3, $4)`,
-		entity.ID, entity.Title, entity.Type, entity.DefaultCapacity)
+		`INSERT INTO entities (id, title, type, employee_id, default_capacity)
+		 VALUES ($1, $2, $3, $4, $5)`,
+		entity.ID, entity.Title, entity.Type, entity.EmployeeID, entity.DefaultCapacity)
 
 	if err != nil {
 		return fmt.Errorf("failed to create entity: %w", err)
@@ -55,8 +55,8 @@ func (r *EntityRepository) Create(ctx context.Context, entity *models.Entity) er
 // Update updates an existing entity
 func (r *EntityRepository) Update(ctx context.Context, entity *models.Entity) error {
 	result, err := r.pool.Exec(ctx,
-		`UPDATE entities SET title = $2, default_capacity = $3 WHERE id = $1`,
-		entity.ID, entity.Title, entity.DefaultCapacity)
+		`UPDATE entities SET title = $2, employee_id = $3, default_capacity = $4 WHERE id = $1`,
+		entity.ID, entity.Title, entity.EmployeeID, entity.DefaultCapacity)
 
 	if err != nil {
 		return fmt.Errorf("failed to update entity: %w", err)
@@ -89,7 +89,7 @@ func (r *EntityRepository) UpdateDefaultCapacity(ctx context.Context, id string,
 // ListPersons returns all person entities
 func (r *EntityRepository) ListPersons(ctx context.Context) ([]models.Entity, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, title, type, default_capacity, created_at
+		`SELECT id, title, type, employee_id, default_capacity, created_at
 		 FROM entities WHERE type = 'person' ORDER BY title`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list persons: %w", err)
@@ -99,7 +99,7 @@ func (r *EntityRepository) ListPersons(ctx context.Context) ([]models.Entity, er
 	var entities []models.Entity
 	for rows.Next() {
 		var e models.Entity
-		if err := rows.Scan(&e.ID, &e.Title, &e.Type, &e.DefaultCapacity, &e.CreatedAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.Title, &e.Type, &e.EmployeeID, &e.DefaultCapacity, &e.CreatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan entity: %w", err)
 		}
 		entities = append(entities, e)
@@ -111,7 +111,7 @@ func (r *EntityRepository) ListPersons(ctx context.Context) ([]models.Entity, er
 // ListGroups returns all group entities
 func (r *EntityRepository) ListGroups(ctx context.Context) ([]models.Entity, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, title, type, default_capacity, created_at
+		`SELECT id, title, type, employee_id, default_capacity, created_at
 		 FROM entities WHERE type = 'group' ORDER BY title`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list groups: %w", err)
@@ -121,7 +121,7 @@ func (r *EntityRepository) ListGroups(ctx context.Context) ([]models.Entity, err
 	var entities []models.Entity
 	for rows.Next() {
 		var e models.Entity
-		if err := rows.Scan(&e.ID, &e.Title, &e.Type, &e.DefaultCapacity, &e.CreatedAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.Title, &e.Type, &e.EmployeeID, &e.DefaultCapacity, &e.CreatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan entity: %w", err)
 		}
 		entities = append(entities, e)
@@ -133,7 +133,7 @@ func (r *EntityRepository) ListGroups(ctx context.Context) ([]models.Entity, err
 // ListAll returns all entities
 func (r *EntityRepository) ListAll(ctx context.Context) ([]models.Entity, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, title, type, default_capacity, created_at
+		`SELECT id, title, type, employee_id, default_capacity, created_at
 		 FROM entities ORDER BY type, title`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list entities: %w", err)
@@ -143,7 +143,7 @@ func (r *EntityRepository) ListAll(ctx context.Context) ([]models.Entity, error)
 	var entities []models.Entity
 	for rows.Next() {
 		var e models.Entity
-		if err := rows.Scan(&e.ID, &e.Title, &e.Type, &e.DefaultCapacity, &e.CreatedAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.Title, &e.Type, &e.EmployeeID, &e.DefaultCapacity, &e.CreatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan entity: %w", err)
 		}
 		entities = append(entities, e)
