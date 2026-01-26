@@ -15,7 +15,10 @@
       "Bash(chmod:*)",
       "Bash(bash -n:*)",
       "Bash(bash:*)",
-      "Bash(make:*)"
+      "Bash(make:*)",
+      "WebFetch(domain:open.larksuite.com)",
+      "WebSearch",
+      "Bash(curl:*)"
     ]
   }
 }
